@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Transformer AI — Live Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0B1020;--bg2:#111827;--bg3:#0F172A;
+  --blue:#3B82F6;--cyan:#06B6D4;--green:#10B981;
+  --orange:#F59E0B;--red:#EF4444;--purple:#8B5CF6;
+  --t1:#F1F5F9;--t2:#94A3B8;--t3:#7DD3FC;
+  --f1:'Orbitron',monospace;--f2:'Rajdhani',sans-serif;--f3:'Share Tech Mono',monospace;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--t1);font-family:var(--f2);font-size:15px;overflow-x:hidden}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-thumb{background:var(--blue);border-radius:3px}
+
+/* Grid BG */
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(59,130,246,.04)1px,transparent 1px),
+                   linear-gradient(90deg,rgba(59,130,246,.04)1px,transparent 1px);
+  background-size:55px 55px;pointer-events:none;z-index:0}
+
+/* Orbs */
+.orb{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0;animation:orbf 12s ease-in-out infinite}
+.o1{width:500px;height:500px;background:radial-gradient(circle,rgba(59,130,246,.12),transparent 70%);top:-200px;left:-150px}
+.o2{width:350px;height:350px;background:radial-gradient(circle,rgba(6,182,212,.1),transparent 70%);top:55%;right:-100px;animation-delay:5s}
+.o3{width:400px;height:400px;background:radial-gradient(circle,rgba(16,185,129,.08),transparent 70%);bottom:-100px;left:30%;animation-delay:9s}
+@keyframes orbf{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-25px) scale(1.04)}}
+
+/* Particles */
+#pc{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0}
+
+.layer{position:relative;z-index:1}
+
+/* ── TICKER ── */
+.ticker{position:fixed;top:0;left:0;right:0;z-index:1001;height:22px;overflow:hidden;
+  background:rgba(11,16,32,.92);border-bottom:1px solid rgba(59,130,246,.15)}
+.ticker-inner{display:inline-block;white-space:nowrap;animation:tick 30s linear infinite;
+  font-family:var(--f3);font-size:10px;color:var(--cyan);line-height:22px;padding-left:100%}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ── NAV ── */
+nav{position:fixed;top:22px;left:0;right:0;z-index:1000;height:62px;
+  display:flex;align-items:center;justify-content:space-between;padding:0 2rem;
+  background:rgba(11,16,32,.85);backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(59,130,246,.15);transition:all .3s}
+nav.scrolled{background:rgba(11,16,32,.97);box-shadow:0 4px 30px rgba(0,0,0,.4)}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--blue),var(--cyan));
+  border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;
+  box-shadow:0 0 18px rgba(59,130,246,.5);animation:lp 3s ease-in-out infinite}
+@keyframes lp{0%,100%{box-shadow:0 0 18px rgba(59,130,246,.5)}50%{box-shadow:0 0 30px rgba(59,130,246,.8)}}
+.logo-text{font-family:var(--f1);font-size:.78rem;font-weight:700;letter-spacing:.1em}
+.logo-sub{font-size:.6rem;color:var(--cyan);letter-spacing:.2em;text-transform:uppercase}
+.nav-links{display:flex;gap:.1rem;list-style:none}
+.nav-links a{display:block;padding:.4rem .85rem;font-family:var(--f2);font-size:.82rem;font-weight:500;
+  letter-spacing:.07em;color:var(--t2);text-decoration:none;border-radius:6px;
+  text-transform:uppercase;transition:all .3s;position:relative}
+.nav-links a::after{content:'';position:absolute;bottom:2px;left:50%;right:50%;height:2px;
+  background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:1px;transition:all .3s}
+.nav-links a:hover{color:var(--t1);background:rgba(59,130,246,.08)}
+.nav-links a:hover::after,.nav-links a.act::after{left:10%;right:10%}
+.nav-links a.act{color:var(--cyan)}
+.sys-pill{display:flex;align-items:center;gap:7px;padding:.3rem .8rem;
+  background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:20px;
+  font-family:var(--f3);font-size:.65rem;color:var(--green)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 7px var(--green);animation:bl 2s infinite}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── HERO ── */
+.hero{min-height:100vh;display:flex;align-items:center;padding:110px 2rem 80px;
+  position:relative;overflow:hidden}
+.hcont{max-width:1260px;margin:0 auto;width:100%;display:grid;
+  grid-template-columns:1fr 1fr;gap:3.5rem;align-items:center}
+.hbadge{display:inline-flex;align-items:center;gap:7px;padding:.35rem .9rem;
+  background:rgba(6,182,212,.08);border:1px solid rgba(6,182,212,.25);border-radius:20px;
+  font-family:var(--f3);font-size:.67rem;color:var(--cyan);letter-spacing:.12em;margin-bottom:1.4rem}
+.bdot{width:6px;height:6px;border-radius:50%;background:var(--cyan);
+  box-shadow:0 0 7px var(--cyan);animation:bl 1.5s infinite}
+h1{font-family:var(--f1);font-size:clamp(1.8rem,3.5vw,2.9rem);font-weight:900;
+  line-height:1.1;letter-spacing:.02em;margin-bottom:1.3rem}
+.gtxt{background:linear-gradient(135deg,var(--blue) 0%,var(--cyan) 50%,var(--green) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:block}
+.hsub{font-size:1rem;color:var(--t2);line-height:1.7;max-width:460px;margin-bottom:2.2rem}
+.hbtns{display:flex;gap:.9rem;flex-wrap:wrap}
+.btn-p{display:inline-flex;align-items:center;gap:7px;padding:.8rem 1.6rem;
+  background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;
+  font-family:var(--f2);font-size:.85rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  border:none;border-radius:8px;cursor:pointer;text-decoration:none;transition:all .3s;
+  box-shadow:0 0 18px rgba(59,130,246,.4)}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 0 30px rgba(59,130,246,.65)}
+.btn-s{display:inline-flex;align-items:center;gap:7px;padding:.8rem 1.6rem;
+  background:transparent;color:var(--t1);font-family:var(--f2);font-size:.85rem;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;border:1px solid rgba(59,130,246,.4);
+  border-radius:8px;cursor:pointer;text-decoration:none;transition:all .3s}
+.btn-s:hover{background:rgba(59,130,246,.1);border-color:var(--blue);transform:translateY(-2px)}
+.hstats{display:flex;gap:2rem;margin-top:2.5rem;padding-top:2rem;
+  border-top:1px solid rgba(59,130,246,.15)}
+.snum{font-family:var(--f1);font-size:1.5rem;font-weight:700;color:var(--cyan)}
+.slbl{font-size:.7rem;color:var(--t2);text-transform:uppercase;letter-spacing:.1em}
+.hdiv{width:1px;background:rgba(59,130,246,.15)}
+
+/* Hero visual */
+.hvis{position:relative;display:flex;align-items:center;justify-content:center;
+  animation:hf 6s ease-in-out infinite}
+@keyframes hf{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+.hcard{width:100%;max-width:460px;padding:1.75rem;background:rgba(17,24,39,.65);
+  border:1px solid rgba(59,130,246,.2);border-radius:18px;backdrop-filter:blur(18px);position:relative;overflow:hidden}
+.hcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--blue),var(--cyan),transparent);
+  animation:scan 3s linear infinite}
+@keyframes scan{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.tvis{width:100%;height:200px;position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:1.3rem}
+.tsvg{position:relative;width:170px;height:170px}
+.ring{position:absolute;border-radius:50%;border:1px solid;animation:rr linear infinite}
+.r1{inset:0;border-color:rgba(59,130,246,.4);animation-duration:20s}
+.r2{inset:14px;border-color:rgba(6,182,212,.3);animation-duration:15s;animation-direction:reverse}
+.r3{inset:28px;border-color:rgba(16,185,129,.2);animation-duration:10s}
+.ring::after{content:'';position:absolute;width:7px;height:7px;border-radius:50%;top:-3.5px;left:50%;transform:translateX(-50%)}
+.r1::after{background:var(--blue);box-shadow:0 0 8px var(--blue)}
+.r2::after{background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+.r3::after{background:var(--green);box-shadow:0 0 8px var(--green)}
+@keyframes rr{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.core{position:absolute;inset:42px;background:linear-gradient(135deg,rgba(59,130,246,.2),rgba(6,182,212,.15));
+  border-radius:50%;border:1px solid rgba(59,130,246,.4);display:flex;align-items:center;
+  justify-content:center;font-size:2.2rem;animation:cp 3s ease-in-out infinite}
+@keyframes cp{0%,100%{box-shadow:0 0 18px rgba(59,130,246,.3),inset 0 0 18px rgba(59,130,246,.1)}
+  50%{box-shadow:0 0 35px rgba(59,130,246,.6),inset 0 0 25px rgba(59,130,246,.2)}}
+.mmgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.65rem}
+.mm{padding:.65rem;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.12);
+  border-radius:9px;text-align:center}
+.mmv{font-family:var(--f3);font-size:.95rem;font-weight:600;color:var(--cyan)}
+.mml{font-size:.6rem;color:var(--t2);text-transform:uppercase;letter-spacing:.07em;margin-top:1px}
+
+/* ── SECTION ── */
+section{padding:90px 2rem;position:relative}
+.scont{max-width:1260px;margin:0 auto;width:100%}
+.shdr{text-align:center;margin-bottom:3.5rem}
+.stag{display:inline-block;padding:.28rem .85rem;background:rgba(6,182,212,.07);
+  border:1px solid rgba(6,182,212,.22);border-radius:20px;font-family:var(--f3);
+  font-size:.66rem;color:var(--cyan);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.85rem}
+h2{font-family:var(--f1);font-size:clamp(1.5rem,2.8vw,2.2rem);font-weight:700;
+  letter-spacing:.03em;margin-bottom:.6rem}
+h2 span{background:linear-gradient(135deg,var(--blue),var(--cyan));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sdesc{color:var(--t2);max-width:540px;margin:0 auto;font-size:.95rem}
+
+/* ── CARDS ── */
+.dgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.3rem;margin-bottom:1.5rem}
+.gc{background:rgba(17,24,39,.6);border:1px solid rgba(59,130,246,.15);border-radius:15px;
+  padding:1.4rem;backdrop-filter:blur(14px);position:relative;overflow:hidden;
+  transition:all .4s cubic-bezier(.4,0,.2,1)}
+.gc::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(59,130,246,.35),transparent)}
+.gc:hover{transform:translateY(-4px);border-color:rgba(59,130,246,.32);
+  box-shadow:0 18px 38px rgba(0,0,0,.28),0 0 18px rgba(59,130,246,.25)}
+.gc.g:hover{box-shadow:0 18px 38px rgba(0,0,0,.28),0 0 18px rgba(16,185,129,.25);border-color:rgba(16,185,129,.32)}
+.gc.o:hover{box-shadow:0 18px 38px rgba(0,0,0,.28),0 0 18px rgba(245,158,11,.25);border-color:rgba(245,158,11,.32)}
+.gc.c:hover{box-shadow:0 18px 38px rgba(0,0,0,.28),0 0 18px rgba(6,182,212,.25);border-color:rgba(6,182,212,.32)}
+.ch{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.1rem}
+.ci{width:42px;height:42px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+.ci.b{background:rgba(59,130,246,.13);border:1px solid rgba(59,130,246,.22)}
+.ci.g{background:rgba(16,185,129,.13);border:1px solid rgba(16,185,129,.22)}
+.ci.cy{background:rgba(6,182,212,.13);border:1px solid rgba(6,182,212,.22)}
+.ci.or{background:rgba(245,158,11,.13);border:1px solid rgba(245,158,11,.22)}
+.ci.r{background:rgba(239,68,68,.13);border:1px solid rgba(239,68,68,.22)}
+.ci.p{background:rgba(139,92,246,.13);border:1px solid rgba(139,92,246,.22)}
+.cp{width:9px;height:9px;border-radius:50%;position:relative}
+.cp::before{content:'';position:absolute;inset:-4px;border-radius:50%;animation:pr 2s infinite}
+.cp.g{background:var(--green);box-shadow:0 0 8px var(--green)}
+.cp.g::before{border:2px solid rgba(16,185,129,.35)}
+.cp.b{background:var(--blue);box-shadow:0 0 8px var(--blue)}
+.cp.b::before{border:2px solid rgba(59,130,246,.35)}
+.cp.o{background:var(--orange);box-shadow:0 0 8px var(--orange)}
+.cp.o::before{border:2px solid rgba(245,158,11,.35)}
+@keyframes pr{0%{transform:scale(1);opacity:1}100%{transform:scale(2.4);opacity:0}}
+.clbl{font-size:.7rem;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.11em;margin-bottom:.35rem}
+.cval{font-family:var(--f1);font-size:1.85rem;font-weight:700;line-height:1;margin-bottom:.4rem}
+.cval.b{color:var(--blue)}.cval.g{color:var(--green)}.cval.cy{color:var(--cyan)}.cval.o{color:var(--orange)}.cval.r{color:var(--red)}
+.cu{font-family:var(--f3);font-size:.7rem;color:var(--t2);margin-left:3px}
+.ctr{display:flex;align-items:center;gap:3px;font-size:.75rem;margin-top:.2rem}
+.tu{color:var(--green)}.tn{color:var(--t2)}
+
+/* Circular progress */
+.cpr{position:relative;width:75px;height:75px;margin:.65rem auto .6rem}
+.cpr svg{width:100%;height:100%;transform:rotate(-90deg)}
+.cpfill{fill:none;stroke-width:4;stroke-linecap:round;transition:stroke-dashoffset 1.5s cubic-bezier(.4,0,.2,1)}
+.cpbg{fill:none;stroke:rgba(59,130,246,.08);stroke-width:4}
+.cptxt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--f1);font-size:.85rem;font-weight:700}
+
+/* Progress bar */
+.pbar{margin-top:.9rem}
+.pbarlbl{display:flex;justify-content:space-between;font-size:.7rem;color:var(--t2);margin-bottom:5px}
+.pbartrack{height:4px;background:rgba(59,130,246,.08);border-radius:2px;overflow:hidden}
+.pbarfill{height:100%;border-radius:2px;transition:width 1.5s cubic-bezier(.4,0,.2,1)}
+
+/* Status badge */
+.sbdg{display:inline-flex;align-items:center;gap:5px;padding:.3rem .75rem;border-radius:20px;
+  font-family:var(--f3);font-size:.7rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
+.sbdg.n{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:var(--green)}
+.sbdg.w{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--orange)}
+.sbdg.cr{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red)}
+
+/* ── CHARTS ── */
+#analytics{background:var(--bg2)}
+.cgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.3rem}
+.ccard{background:rgba(11,16,32,.82);border:1px solid rgba(59,130,246,.1);border-radius:15px;
+  padding:1.4rem;position:relative;overflow:hidden;transition:all .3s}
+.ccard:hover{border-color:rgba(59,130,246,.22);transform:translateY(-2px)}
+.cchdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem}
+.cctitle{font-family:var(--f1);font-size:.78rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
+.ccbdg{font-family:var(--f3);font-size:.6rem;padding:.18rem .55rem;border-radius:4px;
+  background:rgba(59,130,246,.09);color:var(--cyan);border:1px solid rgba(59,130,246,.18)}
+.cwrap{height:185px;position:relative}
+
+/* ── PREDICTION ── */
+#predictions{background:linear-gradient(180deg,transparent,rgba(16,185,129,.02),transparent)}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:1.8rem;align-items:start}
+.upzone{border:2px dashed rgba(59,130,246,.28);border-radius:15px;padding:2.5rem 1.75rem;
+  text-align:center;cursor:pointer;transition:all .3s;background:rgba(59,130,246,.02)}
+.upzone:hover,.upzone.drag{border-color:var(--blue);background:rgba(59,130,246,.06);
+  box-shadow:0 0 18px rgba(59,130,246,.3)}
+.upicon{font-size:2.8rem;display:block;animation:fi 3s ease-in-out infinite}
+@keyframes fi{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.uptitle{font-family:var(--f1);font-size:.95rem;font-weight:600;letter-spacing:.07em;margin:.8rem 0 .4rem}
+.upsub{font-size:.82rem;color:var(--t2);margin-bottom:1.3rem}
+.upspecs{display:flex;justify-content:center;gap:.75rem;flex-wrap:wrap;margin-top:.9rem}
+.usp{font-family:var(--f3);font-size:.6rem;color:var(--t2);padding:.22rem .55rem;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:4px}
+.prpanel{background:rgba(17,24,39,.82);border:1px solid rgba(59,130,246,.14);border-radius:15px;
+  padding:1.8rem;position:relative;overflow:hidden;min-height:360px;display:flex;flex-direction:column}
+.prpanel.rn{border-color:rgba(16,185,129,.4);box-shadow:0 0 18px rgba(16,185,129,.2)}
+.prpanel.rw{border-color:rgba(245,158,11,.4);box-shadow:0 0 18px rgba(245,158,11,.2)}
+.prpanel.rc{border-color:rgba(239,68,68,.4);box-shadow:0 0 18px rgba(239,68,68,.2)}
+.prph{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.9rem;color:var(--t2)}
+.prph-icon{font-size:3.2rem;opacity:.38}
+.prph-title{font-family:var(--f1);font-size:.82rem;font-weight:600;letter-spacing:.06em;color:var(--t2);text-align:center}
+.prcls{display:flex;gap:.6rem;flex-wrap:wrap;justify-content:center;font-family:var(--f3);font-size:.6rem}
+.prc-n{padding:.25rem .7rem;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;color:var(--green)}
+.prc-w{padding:.25rem .7rem;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;color:var(--orange)}
+.prc-r{padding:.25rem .7rem;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;color:var(--red)}
+.prld{display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:1.3rem}
+.spin{width:55px;height:55px;border-radius:50%;border:3px solid rgba(59,130,246,.1);
+  border-top-color:var(--blue);animation:sp 1s linear infinite;box-shadow:0 0 18px rgba(59,130,246,.3)}
+@keyframes sp{to{transform:rotate(360deg)}}
+.prresult{display:none}
+.prsbox{text-align:center;padding:1.3rem;border-radius:11px;margin-bottom:1.3rem}
+.prsbox.n{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.22)}
+.prsbox.w{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.22)}
+.prsbox.cr{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.22);animation:cf 2s ease infinite}
+@keyframes cf{0%,100%{border-color:rgba(239,68,68,.22)}50%{border-color:rgba(239,68,68,.55)}}
+.prsi{font-size:2.8rem;display:block;margin-bottom:.4rem}
+.prst{font-family:var(--f1);font-size:1.4rem;font-weight:700;letter-spacing:.1em}
+.prst.n{color:var(--green)}.prst.w{color:var(--orange)}.prst.cr{color:var(--red)}
+.probs{display:grid;gap:.65rem}
+.prow{display:flex;align-items:center;gap:.9rem}
+.plbl{font-family:var(--f3);font-size:.7rem;width:65px;flex-shrink:0}
+.pbar2{flex:1;height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+.pbarfill2{height:100%;border-radius:3px;transition:width 1s ease}
+.ppct{font-family:var(--f3);font-size:.7rem;width:38px;text-align:right;flex-shrink:0}
+
+/* ── FEATURES ── */
+#about{background:var(--bg3)}
+.fgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.3rem}
+.fc{padding:1.75rem 1.4rem;background:rgba(17,24,39,.5);border:1px solid rgba(59,130,246,.09);
+  border-radius:15px;transition:all .4s;position:relative;overflow:hidden}
+.fc::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--blue),var(--cyan));transform:scaleX(0);transition:transform .4s}
+.fc:hover{transform:translateY(-5px);border-color:rgba(59,130,246,.22);background:rgba(17,24,39,.8)}
+.fc:hover::after{transform:scaleX(1)}
+.fic{font-size:2.3rem;margin-bottom:1.1rem;display:block}
+.ftit{font-family:var(--f1);font-size:.88rem;font-weight:600;letter-spacing:.05em;
+  text-transform:uppercase;margin-bottom:.65rem}
+.fdesc{font-size:.88rem;color:var(--t2);line-height:1.7}
+
+/* ── METRICS ROW ── */
+.mrow{display:grid;grid-template-columns:repeat(4,1fr);gap:1.3rem;margin-top:2rem}
+.mcard{text-align:center;padding:1.6rem 1rem;background:rgba(17,24,39,.6);
+  border:1px solid rgba(59,130,246,.12);border-radius:14px}
+.mnum{font-family:var(--f1);font-size:1.9rem;font-weight:900}
+.mnum.b{color:var(--blue)}.mnum.cy{color:var(--cyan)}.mnum.g{color:var(--green)}.mnum.o{color:var(--orange)}
+.mlbl{font-size:.7rem;color:var(--t2);text-transform:uppercase;letter-spacing:.1em;margin-top:.22rem}
+
+/* ── FOOTER ── */
+footer{padding:3.5rem 2rem 1.8rem;border-top:1px solid rgba(59,130,246,.09);
+  background:var(--bg);position:relative}
+footer::before{content:'';position:absolute;top:0;left:10%;right:10%;height:1px;
+  background:linear-gradient(90deg,transparent,var(--blue),var(--cyan),var(--blue),transparent);
+  filter:blur(1px);animation:fg 4s ease-in-out infinite alternate}
+@keyframes fg{from{opacity:.4}to{opacity:1}}
+.fgrid2{max-width:1260px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:2.5rem;margin-bottom:2.5rem}
+.ftagline{font-size:.85rem;color:var(--t2);line-height:1.7;margin:.9rem 0 1.3rem}
+.sicns{display:flex;gap:.65rem}
+.sic{width:34px;height:34px;border-radius:7px;background:rgba(59,130,246,.07);
+  border:1px solid rgba(59,130,246,.13);display:flex;align-items:center;justify-content:center;
+  font-size:.85rem;text-decoration:none;color:var(--t2);transition:all .3s}
+.sic:hover{background:rgba(59,130,246,.18);border-color:var(--blue);color:var(--blue);transform:translateY(-2px)}
+.fcoltit{font-family:var(--f1);font-size:.7rem;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;margin-bottom:1.1rem}
+.flinks{list-style:none;display:flex;flex-direction:column;gap:.42rem}
+.flinks a{font-size:.83rem;color:var(--t2);text-decoration:none;transition:color .3s;
+  display:flex;align-items:center;gap:5px}
+.flinks a:hover{color:var(--cyan)}
+.flinks a::before{content:'›';color:var(--blue)}
+.fbot{max-width:1260px;margin:0 auto;padding-top:1.8rem;border-top:1px solid rgba(59,130,246,.07);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem}
+.fbottxt{font-family:var(--f3);font-size:.68rem;color:var(--t2)}
+.fbottxt span{color:var(--cyan)}
+
+/* Scroll reveal */
+[data-r]{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease}
+[data-r].rv{opacity:1;transform:translateY(0)}
+[data-r][data-d="1"]{transition-delay:.1s}
+[data-r][data-d="2"]{transition-delay:.2s}
+[data-r][data-d="3"]{transition-delay:.3s}
+[data-r][data-d="4"]{transition-delay:.4s}
+[data-r][data-d="5"]{transition-delay:.5s}
+[data-r][data-d="6"]{transition-delay:.6s}
+
+@media(max-width:1024px){.dgrid{grid-template-columns:repeat(2,1fr)}.cgrid{grid-template-columns:1fr}.fgrid2{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){
+  .nav-links,.sys-pill{display:none}
+  .hcont{grid-template-columns:1fr;gap:2.5rem;text-align:center}
+  .hbtns,.hstats{justify-content:center}.hsub{margin:0 auto 2rem}
+  .hvis{order:-1}
+  .dgrid,.pgrid,.fgrid,.mrow,.fgrid2{grid-template-columns:1fr}
+  section{padding:65px 1.25rem}
+}
+</style>
+</head>
+<body>
+
+<!-- Bg -->
+<canvas id="pc"></canvas>
+<div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+
+<!-- Ticker -->
+<div class="ticker">
+  <span class="ticker-inner">
+    &nbsp;&nbsp;⚡ SYSTEM ONLINE &nbsp;│&nbsp; VL1: 242.1V &nbsp;│&nbsp; VL2: 241.5V &nbsp;│&nbsp; VL3: 243.0V &nbsp;│&nbsp; IL1: 95.3A &nbsp;│&nbsp; OTI: 46.2°C &nbsp;│&nbsp; PF: 0.98 &nbsp;│&nbsp; KW: 55.4 &nbsp;│&nbsp; FREQ: 50.0Hz &nbsp;│&nbsp; V_IMBALANCE: 0.31% &nbsp;│&nbsp; HEALTH: 87.4% &nbsp;│&nbsp; STATUS: NORMAL &nbsp;│&nbsp; MODEL: XGBoost &nbsp;│&nbsp; ACCURACY: 97.3% &nbsp;│&nbsp; THERMAL_STRESS: 0.18 &nbsp;│&nbsp; LOAD_LEVEL: 39.2%
+    &nbsp;&nbsp;⚡ SYSTEM ONLINE &nbsp;│&nbsp; VL1: 242.1V &nbsp;│&nbsp; VL2: 241.5V &nbsp;│&nbsp; VL3: 243.0V &nbsp;│&nbsp; IL1: 95.3A &nbsp;│&nbsp; OTI: 46.2°C &nbsp;│&nbsp; PF: 0.98 &nbsp;│&nbsp; KW: 55.4 &nbsp;│&nbsp; FREQ: 50.0Hz &nbsp;│&nbsp; V_IMBALANCE: 0.31% &nbsp;│&nbsp; HEALTH: 87.4% &nbsp;│&nbsp; STATUS: NORMAL &nbsp;│&nbsp; MODEL: XGBoost &nbsp;│&nbsp; ACCURACY: 97.3%
+  </span>
+</div>
+
+<!-- Nav -->
+<nav id="nav">
+  <a href="#" class="logo">
+    <div class="logo-icon">⚡</div>
+    <div><div class="logo-text">TRANSFORMER AI</div><div class="logo-sub">Health Monitoring System</div></div>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#hero" class="act">Home</a></li>
+    <li><a href="#dashboard">Dashboard</a></li>
+    <li><a href="#analytics">Analytics</a></li>
+    <li><a href="#predictions">Predictions</a></li>
+    <li><a href="#about">About</a></li>
+  </ul>
+  <div class="sys-pill"><div class="dot"></div>SYSTEM ONLINE</div>
+</nav>
+
+<div class="layer">
+
+<!-- ══ HERO ══ -->
+<section id="hero" class="hero">
+  <div class="hcont">
+    <div>
+      <div class="hbadge"><div class="bdot"></div>AI-POWERED · REAL-TIME · PREDICTIVE</div>
+      <h1>Smart Transformer<span class="gtxt">Intelligence Platform</span></h1>
+      <p class="hsub">AI-powered predictive maintenance and industrial monitoring for transformer health analysis. Detect faults before they happen with <span style="color:var(--cyan);font-weight:600;">Machine Learning</span> and <span style="color:var(--blue);font-weight:600;">Real-time Sensors</span>.</p>
+      <div class="hbtns">
+        <a href="#predictions" class="btn-p">⬆ Upload Dataset</a>
+        <a href="#analytics" class="btn-s">▶ View Analytics</a>
+      </div>
+      <div class="hstats">
+        <div><div class="snum" id="hs1">0</div><div class="slbl">Model Accuracy %</div></div>
+        <div class="hdiv"></div>
+        <div><div class="snum" id="hs2">0</div><div class="slbl">Sensor Readings</div></div>
+        <div class="hdiv"></div>
+        <div><div class="snum" id="hs3">0</div><div class="slbl">Health States</div></div>
+      </div>
+    </div>
+    <div class="hvis">
+      <div class="hcard">
+        <div class="tvis">
+          <div class="tsvg">
+            <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div>
+            <div class="core">⚡</div>
+          </div>
+          <div style="position:absolute;top:8px;left:0;font-family:var(--f3);font-size:.62rem;color:var(--blue);">
+            <div>L1 ─── 242.1V</div><div style="margin-top:4px">L2 ─── 241.5V</div><div style="margin-top:4px">L3 ─── 243.0V</div>
+          </div>
+          <div style="position:absolute;top:8px;right:0;font-family:var(--f3);font-size:.62rem;color:var(--cyan);text-align:right">
+            <div>OTI: 46.2°C</div><div style="margin-top:4px">PF: 0.98</div><div style="margin-top:4px">KW: 55.4</div>
+          </div>
+          <div style="position:absolute;bottom:0;left:0;right:0;display:flex;align-items:center;gap:7px;justify-content:center">
+            <span style="font-family:var(--f3);font-size:.6rem;color:var(--t2)">HEALTH</span>
+            <div style="flex:1;height:3px;background:rgba(59,130,246,.1);border-radius:2px;overflow:hidden">
+              <div style="width:87%;height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:2px"></div>
+            </div>
+            <span style="font-family:var(--f3);font-size:.6rem;color:var(--green)">87%</span>
+          </div>
+        </div>
+        <div class="mmgrid">
+          <div class="mm"><div class="mmv" id="hmm1">46.2°</div><div class="mml">Oil Temp</div></div>
+          <div class="mm"><div class="mmv" style="color:var(--green)">NORM</div><div class="mml">Status</div></div>
+          <div class="mm"><div class="mmv" style="color:var(--orange)" id="hmm2">8.3%</div><div class="mml">Fail Prob</div></div>
+        </div>
+        <div style="margin-top:.9rem;padding:.65rem;background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.11);border-radius:9px;display:flex;align-items:center;gap:9px">
+          <div class="dot" style="flex-shrink:0"></div>
+          <div style="font-family:var(--f3);font-size:.66rem;color:var(--t2)">AI MODEL: <span style="color:var(--cyan)">XGBoost</span> · FEATURES: <span style="color:var(--blue)">32</span> · PRED: <span style="color:var(--green)">NORMAL</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Wave -->
+  <div style="position:absolute;bottom:0;left:0;right:0;height:100px;overflow:hidden">
+    <svg viewBox="0 0 1440 100" preserveAspectRatio="none" style="width:100%;height:100%">
+      <path d="M0,50 C240,85 480,15 720,50 C960,85 1200,15 1440,50 L1440,100 L0,100 Z" fill="rgba(17,24,39,.4)"/>
+    </svg>
+  </div>
+</section>
+
+<!-- ══ DASHBOARD ══ -->
+<section id="dashboard">
+  <div class="scont">
+    <div class="shdr" data-r><div class="stag">// LIVE TELEMETRY</div>
+      <h2>Real-Time <span>Monitoring Dashboard</span></h2>
+      <p class="sdesc">Live sensor data with AI-driven health analysis and predictive insights.</p>
+    </div>
+    <div class="dgrid">
+
+      <!-- Health Score -->
+      <div class="gc" data-r data-d="1">
+        <div class="ch"><div class="ci b">🫀</div><div class="cp g"></div></div>
+        <div class="clbl">Transformer Health Score</div>
+        <div class="cpr" id="hp">
+          <svg viewBox="0 0 75 75">
+            <circle class="cpbg" cx="37.5" cy="37.5" r="32"/>
+            <circle class="cpfill" cx="37.5" cy="37.5" r="32" stroke="url(#hg)" style="stroke-dasharray:201;stroke-dashoffset:26"/>
+            <defs><linearGradient id="hg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#3B82F6"/><stop offset="100%" stop-color="#10B981"/></linearGradient></defs>
+          </svg>
+          <div class="cptxt" style="color:var(--green)"><span id="lh">87.4</span>%</div>
+        </div>
+        <div class="ctr tu">▲ 2.1% from last hour</div>
+      </div>
+
+      <!-- Status -->
+      <div class="gc g" data-r data-d="2">
+        <div class="ch"><div class="ci g">📡</div><div class="cp g"></div></div>
+        <div class="clbl">Operational Status</div>
+        <div style="margin:1rem 0"><div id="lsbdg" class="sbdg n"><span id="lst">● NORMAL</span></div></div>
+        <div style="font-family:var(--f3);font-size:.66rem;color:var(--t2)">Updated: <span style="color:var(--cyan)" id="lupd">Just now</span></div>
+        <div class="pbar" style="margin-top:1.3rem">
+          <div class="pbarlbl"><span>System Reliability</span><span style="color:var(--green)">94.7%</span></div>
+          <div class="pbartrack"><div class="pbarfill" style="width:94.7%;background:linear-gradient(90deg,var(--green),#34D399)"></div></div>
+        </div>
+      </div>
+
+      <!-- Temperature -->
+      <div class="gc o" data-r data-d="3">
+        <div class="ch"><div class="ci or">🌡️</div><div class="cp o"></div></div>
+        <div class="clbl">Oil Temperature Index (OTI)</div>
+        <div class="cval o"><span id="lt">46.2</span><span class="cu">°C</span></div>
+        <div class="ctr tn" style="margin-bottom:.65rem">— Stable · Warning at 55°C</div>
+        <div class="pbar">
+          <div class="pbarlbl"><span>35°C</span><span>100°C</span></div>
+          <div class="pbartrack"><div class="pbarfill" id="tb" style="width:28%;background:linear-gradient(90deg,var(--blue),var(--orange))"></div></div>
+        </div>
+      </div>
+
+      <!-- Voltage -->
+      <div class="gc c" data-r data-d="4">
+        <div class="ch"><div class="ci cy">⚡</div><div class="cp b"></div></div>
+        <div class="clbl">Average Phase Voltage</div>
+        <div class="cval cy"><span id="lv">242.1</span><span class="cu">V</span></div>
+        <div style="display:flex;gap:.45rem;margin:.65rem 0;flex-wrap:wrap">
+          <span style="font-family:var(--f3);font-size:.62rem;padding:2px 7px;background:rgba(59,130,246,.08);border-radius:3px;color:var(--blue)">L1: 242.1V</span>
+          <span style="font-family:var(--f3);font-size:.62rem;padding:2px 7px;background:rgba(6,182,212,.08);border-radius:3px;color:var(--cyan)">L2: 241.5V</span>
+          <span style="font-family:var(--f3);font-size:.62rem;padding:2px 7px;background:rgba(16,185,129,.08);border-radius:3px;color:var(--green)">L3: 243.0V</span>
+        </div>
+        <div class="pbar">
+          <div class="pbarlbl"><span>220V</span><span>270V</span></div>
+          <div class="pbartrack"><div class="pbarfill" id="vb" style="width:44%;background:linear-gradient(90deg,var(--cyan),var(--blue))"></div></div>
+        </div>
+      </div>
+
+      <!-- Power -->
+      <div class="gc" data-r data-d="5">
+        <div class="ch"><div class="ci p">⚙️</div><div class="cp b"></div></div>
+        <div class="clbl">Active Power Consumption</div>
+        <div class="cval b"><span id="lp">55.4</span><span class="cu">kW</span></div>
+        <div style="display:flex;gap:.45rem;margin:.45rem 0;font-family:var(--f3);font-size:.62rem;color:var(--t2)">
+          <span>KVA:<span style="color:var(--blue)">57.2</span></span>·
+          <span>KVAR:<span style="color:var(--purple)">12.0</span></span>·
+          <span>PF:<span style="color:var(--green)">0.98</span></span>
+        </div>
+        <div class="pbar">
+          <div class="pbarlbl"><span>Load Level</span><span style="color:var(--blue)">39.2%</span></div>
+          <div class="pbartrack"><div class="pbarfill" id="pb" style="width:39.2%;background:linear-gradient(90deg,var(--blue),var(--purple))"></div></div>
+        </div>
+      </div>
+
+      <!-- Failure Prob -->
+      <div class="gc" data-r data-d="6">
+        <div class="ch"><div class="ci r">🎯</div><div class="cp g"></div></div>
+        <div class="clbl">Failure Probability</div>
+        <div class="cpr">
+          <svg viewBox="0 0 75 75">
+            <circle class="cpbg" cx="37.5" cy="37.5" r="32"/>
+            <circle class="cpfill" cx="37.5" cy="37.5" r="32" stroke="#EF4444" id="fpf" style="stroke-dasharray:201;stroke-dashoffset:184"/>
+          </svg>
+          <div class="cptxt" style="color:var(--green)"><span id="lfp">8.3</span>%</div>
+        </div>
+        <div style="font-family:var(--f3);font-size:.65rem;color:var(--t2)">ISOLATION FOREST · ANOMALY SCORE</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══ CHARTS ══ -->
+<section id="analytics">
+  <div class="scont">
+    <div class="shdr" data-r><div class="stag">// TREND ANALYSIS</div>
+      <h2>Data <span>Visualization</span></h2>
+      <p class="sdesc">Historical sensor trends and anomaly patterns for comprehensive transformer analysis.</p>
+    </div>
+    <div class="cgrid">
+      <div class="ccard" data-r data-d="1">
+        <div class="cchdr"><div class="cctitle">Three-Phase Voltage Trend</div><span class="ccbdg">LIVE · 5min</span></div>
+        <div class="cwrap"><canvas id="vc" role="img" aria-label="Three phase voltage trend chart">VL1, VL2, VL3 voltage readings over time.</canvas></div>
+        <div style="display:flex;gap:.9rem;margin-top:.65rem;font-family:var(--f3);font-size:.62rem">
+          <span style="color:var(--blue)">● L1</span><span style="color:var(--cyan)">● L2</span><span style="color:var(--green)">● L3</span>
+        </div>
+      </div>
+      <div class="ccard" data-r data-d="2">
+        <div class="cchdr"><div class="cctitle">Oil Temperature Index (OTI)</div><span class="ccbdg" style="background:rgba(245,158,11,.09);color:var(--orange);border-color:rgba(245,158,11,.18)">THERMAL</span></div>
+        <div class="cwrap"><canvas id="tc" role="img" aria-label="Oil temperature index chart">OTI temperature readings over 30 data points.</canvas></div>
+        <div style="display:flex;gap:1.3rem;margin-top:.65rem;font-family:var(--f3);font-size:.62rem;color:var(--t2)">
+          <span>Warning: <span style="color:var(--orange)">55°C</span></span>
+          <span>Critical: <span style="color:var(--red)">80°C</span></span>
+        </div>
+      </div>
+      <div class="ccard" data-r data-d="3">
+        <div class="cchdr"><div class="cctitle">Voltage Imbalance Distribution</div><span class="ccbdg" style="background:rgba(139,92,246,.09);color:var(--purple);border-color:rgba(139,92,246,.18)">QUALITY</span></div>
+        <div class="cwrap"><canvas id="ic" role="img" aria-label="Voltage imbalance distribution bar chart">Voltage imbalance percentage values over time.</canvas></div>
+      </div>
+      <div class="ccard" data-r data-d="4">
+        <div class="cchdr"><div class="cctitle">Transformer Health Score</div><span class="ccbdg" style="background:rgba(16,185,129,.09);color:var(--green);border-color:rgba(16,185,129,.18)">AI SCORE</span></div>
+        <div class="cwrap"><canvas id="hc" role="img" aria-label="Transformer AI health score chart">AI-computed health score over time.</canvas></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ PREDICTIONS ══ -->
+<section id="predictions">
+  <div class="scont">
+    <div class="shdr" data-r><div class="stag">// AI INFERENCE ENGINE</div>
+      <h2>Predictive <span>Health Analysis</span></h2>
+      <p class="sdesc">Upload your sensor CSV and get an instant AI-powered transformer health prediction.</p>
+    </div>
+    <div class="pgrid" data-r>
+      <div>
+        <div class="upzone" id="uz">
+          <span class="upicon">📂</span>
+          <div class="uptitle">DRAG & DROP CSV FILE</div>
+          <div class="upsub">or click to browse your dataset</div>
+          <button class="btn-p" id="ubtn" style="margin:0 auto">⬆ Select CSV File</button>
+          <div class="upspecs">
+            <span class="usp">CSV format</span><span class="usp">Sensor readings</span>
+            <span class="usp">32 features</span><span class="usp">Max 50MB</span>
+          </div>
+          <input type="file" id="cif" accept=".csv" style="display:none"/>
+        </div>
+        <div class="gc" style="margin-top:1.1rem">
+          <div style="font-family:var(--f1);font-size:.72rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;margin-bottom:.9rem">Required Features</div>
+          <div style="display:flex;flex-wrap:wrap;gap:.38rem">
+            <span style="font-family:var(--f3);font-size:.62rem;padding:.2rem .55rem;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.13);border-radius:12px;color:var(--t3)">VL1, VL2, VL3</span>
+            <span style="font-family:var(--f3);font-size:.62rem;padding:.2rem .55rem;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.13);border-radius:12px;color:var(--t3)">IL1, IL2, IL3</span>
+            <span style="font-family:var(--f3);font-size:.62rem;padding:.2rem .55rem;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.13);border-radius:12px;color:var(--t3)">OTI, OLI</span>
+            <span style="font-family:var(--f3);font-size:.62rem;padding:.2rem .55rem;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.13);border-radius:12px;color:var(--t3)">Avg_PF, FRQ</span>
+            <span style="font-family:var(--f3);font-size:.62rem;padding:.2rem .55rem;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.13);border-radius:12px;color:var(--t3)">THDVL1-3</span>
+            <span style="font-family:var(--f3);font-size:.62rem;padding:.2rem .55rem;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.13);border-radius:12px;color:var(--t3)">KW, KVA, KVAR</span>
+            <span style="font-family:var(--f3);font-size:.62rem;padding:.2rem .55rem;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.13);border-radius:12px;color:var(--t3)">V_imbalance</span>
+            <span style="font-family:var(--f3);font-size:.62rem;padding:.2rem .55rem;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.13);border-radius:12px;color:var(--t3)">Thermal_stress</span>
+            <span style="font-family:var(--f3);font-size:.62rem;padding:.2rem .55rem;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.13);border-radius:12px;color:var(--t3)">Load_level</span>
+            <span style="font-family:var(--f3);font-size:.62rem;padding:.2rem .55rem;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.13);border-radius:12px;color:var(--t3)">Hour, DayOfWeek</span>
+          </div>
+        </div>
+      </div>
+      <div class="prpanel" id="prp">
+        <div class="prph" id="prph"><div class="prph-icon">🤖</div>
+          <div class="prph-title">AI PREDICTION ENGINE</div>
+          <div style="font-size:.85rem;text-align:center">Upload a CSV to receive<br/>real-time health classification.</div>
+          <div class="prcls"><span class="prc-n">● NORMAL</span><span class="prc-w">◉ WARNING</span><span class="prc-r">◈ CRITICAL</span></div>
+        </div>
+        <div class="prld" id="prld">
+          <div class="spin"></div>
+          <div style="font-family:var(--f1);font-size:.76rem;letter-spacing:.1em;color:var(--t2)">PROCESSING SENSORS</div>
+          <div style="font-family:var(--f3);font-size:.75rem;color:var(--t2)">Running AI inference…</div>
+        </div>
+        <div class="prresult" id="prres">
+          <div style="font-family:var(--f1);font-size:.67rem;font-weight:600;letter-spacing:.1em;color:var(--t2);margin-bottom:1.1rem">PREDICTION RESULT</div>
+          <div class="prsbox" id="prsbox">
+            <span class="prsi" id="prsi">✅</span>
+            <div class="prst" id="prst">NORMAL</div>
+          </div>
+          <div style="font-family:var(--f1);font-size:.67rem;font-weight:600;letter-spacing:.1em;color:var(--t2);margin-bottom:.65rem">CLASS PROBABILITIES</div>
+          <div class="probs">
+            <div class="prow"><span class="plbl" style="color:var(--green)">NORMAL</span><div class="pbar2"><div class="pbarfill2" id="bn" style="width:0%;background:var(--green)"></div></div><span class="ppct" id="pn" style="color:var(--green)">0%</span></div>
+            <div class="prow"><span class="plbl" style="color:var(--orange)">WARNING</span><div class="pbar2"><div class="pbarfill2" id="bw" style="width:0%;background:var(--orange)"></div></div><span class="ppct" id="pw" style="color:var(--orange)">0%</span></div>
+            <div class="prow"><span class="plbl" style="color:var(--red)">CRITICAL</span><div class="pbar2"><div class="pbarfill2" id="bc" style="width:0%;background:var(--red)"></div></div><span class="ppct" id="pc2" style="color:var(--red)">0%</span></div>
+          </div>
+          <div style="margin-top:1.3rem;padding:.65rem;background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.1);border-radius:7px;font-family:var(--f3);font-size:.65rem;color:var(--t2)">
+            MODEL: <span style="color:var(--cyan)">XGBoost / Random Forest</span> · FEATURES: <span style="color:var(--blue)">32</span>
+          </div>
+          <button class="btn-s" style="margin-top:.9rem;width:100%;justify-content:center" onclick="resetPred()">↺ New Prediction</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ ABOUT ══ -->
+<section id="about">
+  <div class="scont">
+    <div class="shdr" data-r><div class="stag">// SYSTEM CAPABILITIES</div>
+      <h2>Industrial AI <span>Features</span></h2>
+      <p class="sdesc">Enterprise-grade transformer monitoring powered by machine learning and edge computing.</p>
+    </div>
+    <div class="fgrid">
+      <div class="fc" data-r data-d="1"><span class="fic">🧠</span><div class="ftit">AI Health Classification</div><div class="fdesc">Random Forest & XGBoost models trained on 19,000+ sensor readings classify transformer health into Normal, Warning, or Critical states with 97%+ accuracy.</div></div>
+      <div class="fc" data-r data-d="2"><span class="fic">📡</span><div class="ftit">Real-time Sensor Fusion</div><div class="fdesc">Merges 5 sensor streams — CurrentVoltage, Overview, Power, PowerFactor, TotalPower — into a unified 32-feature real-time analysis pipeline.</div></div>
+      <div class="fc" data-r data-d="3"><span class="fic">⚠️</span><div class="ftit">Anomaly Detection</div><div class="fdesc">Isolation Forest unsupervised anomaly detection identifies unusual transformer behaviour patterns before they escalate into failures.</div></div>
+      <div class="fc" data-r data-d="4"><span class="fic">🌡️</span><div class="ftit">Thermal Stress Analysis</div><div class="fdesc">IEC/IEEE-based health labeling monitors OTI, voltage imbalance, and thermal stress to predict transformer degradation trajectories.</div></div>
+      <div class="fc" data-r data-d="5"><span class="fic">📊</span><div class="ftit">Feature Engineering</div><div class="fdesc">Derives V_imbalance, I_imbalance, Thermal_stress, PF_drop, Load_level, and rolling OTI trends for superior model performance.</div></div>
+      <div class="fc" data-r data-d="6" style="background:linear-gradient(135deg,rgba(59,130,246,.06),rgba(6,182,212,.04))"><span class="fic">🔮</span><div class="ftit">Predictive Maintenance</div><div class="fdesc">End-to-end pipeline: load CSVs → engineer features → train ML → detect anomalies → classify health → generate maintenance recommendations.</div></div>
+    </div>
+    <div class="mrow" data-r>
+      <div class="mcard"><div class="mnum g">97.3%</div><div class="mlbl">Model Accuracy</div></div>
+      <div class="mcard"><div class="mnum b">19K+</div><div class="mlbl">Sensor Readings</div></div>
+      <div class="mcard"><div class="mnum cy">32</div><div class="mlbl">Feature Inputs</div></div>
+      <div class="mcard"><div class="mnum o">3</div><div class="mlbl">Health States</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FOOTER ══ -->
+<footer>
+  <div class="fgrid2">
+    <div>
+      <a href="#" class="logo" style="display:inline-flex;margin-bottom:.9rem">
+        <div class="logo-icon">⚡</div>
+        <div style="margin-left:10px"><div class="logo-text">TRANSFORMER AI</div><div class="logo-sub">Health Monitoring System</div></div>
+      </a>
+      <p class="ftagline">AI-powered predictive maintenance for transformer health analysis. Built with Flask, XGBoost, and Random Forest on RPPL Transformers dataset.</p>
+      <div class="sicns">
+        <a href="#" class="sic">⌥</a><a href="#" class="sic">in</a><a href="#" class="sic">✉</a><a href="#" class="sic">◈</a>
+      </div>
+    </div>
+    <div>
+      <div class="fcoltit">Navigation</div>
+      <ul class="flinks">
+        <li><a href="#hero">Home</a></li><li><a href="#dashboard">Dashboard</a></li>
+        <li><a href="#analytics">Analytics</a></li><li><a href="#predictions">Predictions</a></li>
+        <li><a href="#about">About</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="fcoltit">ML Pipeline</div>
+      <ul class="flinks">
+        <li><a href="#">Data Ingestion</a></li><li><a href="#">Feature Engineering</a></li>
+        <li><a href="#">Model Training</a></li><li><a href="#">Anomaly Detection</a></li>
+        <li><a href="#">Health Prediction</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="fcoltit">Sensor Data</div>
+      <ul class="flinks">
+        <li><a href="#">CurrentVoltage</a></li><li><a href="#">Overview (OTI/OLI)</a></li>
+        <li><a href="#">Power Metrics</a></li><li><a href="#">Power Factor</a></li>
+        <li><a href="#">Total Energy</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="fbot">
+    <div class="fbottxt">© 2024 <span>Transformer AI Monitoring System</span> · Flask + ML · RPPL Dataset</div>
+    <div class="fbottxt">Models: <span>XGBoost</span> · <span>Random Forest</span> · <span>Isolation Forest</span></div>
+  </div>
+</footer>
+
+</div><!-- /.layer -->
+
+<script>
+// ── Particles ──────────────────────────────────────────────────────
+(function(){
+  const cv=document.getElementById('pc'),ctx=cv.getContext('2d');
+  cv.width=innerWidth;cv.height=innerHeight;
+  window.addEventListener('resize',()=>{cv.width=innerWidth;cv.height=innerHeight});
+  const clrs=['rgba(59,130,246,','rgba(6,182,212,','rgba(16,185,129,'];
+  const pts=Array.from({length:Math.min(50,Math.floor(innerWidth/22))},()=>({
+    x:Math.random()*cv.width,y:Math.random()*cv.height,
+    vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35,
+    sz:Math.random()*1.8+.4,op:Math.random()*.45+.08,
+    clr:clrs[Math.floor(Math.random()*3)],ph:Math.random()*Math.PI*2,ps:Math.random()*.02+.008
+  }));
+  (function loop(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    pts.forEach(p=>{
+      p.x+=p.vx;p.y+=p.vy;p.ph+=p.ps;
+      if(p.x<0)p.x=cv.width;if(p.x>cv.width)p.x=0;
+      if(p.y<0)p.y=cv.height;if(p.y>cv.height)p.y=0;
+      const a=p.op*(0.7+0.3*Math.sin(p.ph));
+      ctx.beginPath();ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);
+      ctx.fillStyle=p.clr+a+')';ctx.fill();
+      pts.forEach(p2=>{
+        const dx=p.x-p2.x,dy=p.y-p2.y,d=Math.sqrt(dx*dx+dy*dy);
+        if(d<90&&d>0){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p2.x,p2.y);
+          ctx.strokeStyle='rgba(59,130,246,'+(1-d/90)*.07+')';ctx.lineWidth=.4;ctx.stroke()}
+      });
+    });
+    requestAnimationFrame(loop);
+  })();
+})();
+
+// ── Navbar ─────────────────────────────────────────────────────────
+const nav=document.getElementById('nav');
+const navAs=document.querySelectorAll('.nav-links a');
+const secs=[...document.querySelectorAll('section[id]')];
+window.addEventListener('scroll',()=>{
+  nav.classList.toggle('scrolled',scrollY>50);
+  let cur='';secs.forEach(s=>{if(scrollY>=s.offsetTop-130)cur=s.id});
+  navAs.forEach(a=>a.classList.toggle('act',a.getAttribute('href')==='#'+cur));
+},{passive:true});
+
+// ── Smooth scroll ──────────────────────────────────────────────────
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  a.addEventListener('click',e=>{
+    e.preventDefault();const t=document.querySelector(a.getAttribute('href'));
+    if(t)window.scrollTo({top:t.getBoundingClientRect().top+scrollY-68,behavior:'smooth'});
+  });
+});
+
+// ── Reveal ─────────────────────────────────────────────────────────
+const ro=new IntersectionObserver(es=>es.forEach(e=>e.isIntersecting&&(e.target.classList.add('rv'),ro.unobserve(e.target))),{threshold:.1,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('[data-r]').forEach(el=>ro.observe(el));
+
+// ── Hero counter ──────────────────────────────────────────────────
+function animCount(el,tgt,dur=1800,dec=0){
+  const s=performance.now();
+  (function f(n){const p=Math.min((n-s)/dur,1),e=1-Math.pow(1-p,4);
+  el.textContent=(tgt*e).toFixed(dec);p<1&&requestAnimationFrame(f)})(s)
+}
+setTimeout(()=>{animCount(document.getElementById('hs1'),97.3,2000,1);
+  animCount(document.getElementById('hs2'),19000,2200,0);
+  animCount(document.getElementById('hs3'),3,1200,0)},600);
+
+// ── Charts ─────────────────────────────────────────────────────────
+function mkGrad(ctx,c1,c2){const g=ctx.createLinearGradient(0,0,0,185);g.addColorStop(0,c1);g.addColorStop(1,c2);return g}
+function sim(base,amp,n=30){return Array.from({length:n},(_,i)=>+(base+amp*Math.sin(i*.2)+(Math.random()-.5)*amp*.6).toFixed(2))}
+function lbls(n=30){const now=new Date();return Array.from({length:n},(_,i)=>{const d=new Date(now-(n-i)*5*60000);return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')})}
+const tOpts={responsive:true,maintainAspectRatio:false,animation:{duration:1000},
+  plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(11,16,32,.96)',titleColor:'#94A3B8',bodyColor:'#F1F5F9',borderColor:'rgba(59,130,246,.3)',borderWidth:1,padding:9,titleFont:{family:'Share Tech Mono',size:10},bodyFont:{family:'Rajdhani',size:13}}},
+  scales:{x:{grid:{color:'rgba(59,130,246,.05)'},ticks:{color:'#475569',font:{family:'Share Tech Mono',size:8},maxTicksLimit:7}},y:{grid:{color:'rgba(59,130,246,.05)'},ticks:{color:'#475569',font:{family:'Share Tech Mono',size:8}}}}},
+  elements:{point:{radius:0,hoverRadius:4},line:{borderWidth:2,tension:.4}}};
+
+setTimeout(()=>{
+  const L=lbls();
+  // Voltage
+  const vctx=document.getElementById('vc').getContext('2d');
+  new Chart(vctx,{type:'line',data:{labels:L,datasets:[
+    {label:'VL1',data:sim(242,4),borderColor:'#3B82F6',backgroundColor:mkGrad(vctx,'rgba(59,130,246,.22)','rgba(59,130,246,0)'),fill:true},
+    {label:'VL2',data:sim(241.5,4),borderColor:'#06B6D4',backgroundColor:'transparent'},
+    {label:'VL3',data:sim(243,4),borderColor:'#10B981',backgroundColor:'transparent'}
+  ]},options:{...tOpts,plugins:{...tOpts.plugins,legend:{display:true,labels:{color:'#94A3B8',font:{family:'Share Tech Mono',size:8},boxWidth:10,usePointStyle:true}}}}});
+  // Temp
+  const tctx=document.getElementById('tc').getContext('2d');
+  new Chart(tctx,{type:'line',data:{labels:L,datasets:[{label:'OTI°C',data:sim(46,10),borderColor:'#F59E0B',backgroundColor:mkGrad(tctx,'rgba(245,158,11,.2)','rgba(245,158,11,0)'),fill:true}]},options:{...tOpts,scales:{...tOpts.scales,y:{...tOpts.scales.y,min:20,max:100}}}});
+  // Imbalance
+  const idata=sim(1.2,1.8,20);
+  new Chart(document.getElementById('ic').getContext('2d'),{type:'bar',data:{labels:lbls(20),datasets:[{data:idata,backgroundColor:idata.map(v=>v>5?'rgba(239,68,68,.7)':v>2?'rgba(245,158,11,.7)':'rgba(59,130,246,.7)'),borderColor:'transparent',borderRadius:4}]},options:{...tOpts,scales:{...tOpts.scales,y:{...tOpts.scales.y,min:0,max:8}}}});
+  // Health
+  const hctx=document.getElementById('hc').getContext('2d');
+  new Chart(hctx,{type:'line',data:{labels:L,datasets:[{label:'Health',data:sim(87,12).map(v=>Math.max(0,Math.min(100,v))),borderColor:'#10B981',backgroundColor:mkGrad(hctx,'rgba(16,185,129,.22)','rgba(16,185,129,0)'),fill:true}]},options:{...tOpts,scales:{...tOpts.scales,y:{...tOpts.scales.y,min:0,max:100}}}});
+},200);
+
+// ── Live Dashboard Sim ─────────────────────────────────────────────
+function d(v,r){return v+(Math.random()-.5)*r}
+function clamp(v,mn,mx){return Math.max(mn,Math.min(mx,v))}
+let lv={h:87.4,t:46.2,v:242.1,p:55.4,fp:8.3};
+function updateDash(){
+  lv.h=clamp(d(lv.h,2.5),60,100);lv.t=clamp(d(lv.t,1.2),35,70);
+  lv.v=clamp(d(lv.v,.9),230,255);lv.p=clamp(d(lv.p,1.8),40,75);
+  lv.fp=clamp(d(lv.fp,.9),2,25);
+  document.getElementById('lh').textContent=lv.h.toFixed(1);
+  document.getElementById('lt').textContent=lv.t.toFixed(1);
+  document.getElementById('lv').textContent=lv.v.toFixed(1);
+  document.getElementById('lp').textContent=lv.p.toFixed(1);
+  document.getElementById('lfp').textContent=lv.fp.toFixed(1);
+  // Bars
+  document.getElementById('tb').style.width=((lv.t-35)/40*100)+'%';
+  document.getElementById('vb').style.width=((lv.v-220)/50*100)+'%';
+  document.getElementById('pb').style.width=(lv.p/100*100)+'%';
+  // Circular health
+  const r=32,circ=2*Math.PI*r;
+  const hfill=document.querySelector('#hp .cpfill');
+  if(hfill){hfill.style.strokeDashoffset=circ*(1-lv.h/100)}
+  // Circular failure
+  const fpr=document.getElementById('fpf');
+  if(fpr){fpr.style.strokeDashoffset=circ*(1-lv.fp/30)}
+  // Status
+  const sb=document.getElementById('lsbdg'),st=document.getElementById('lst');
+  if(lv.h>=80){sb.className='sbdg n';st.textContent='● NORMAL'}
+  else if(lv.h>=60){sb.className='sbdg w';st.textContent='◉ WARNING'}
+  else{sb.className='sbdg cr';st.textContent='◈ CRITICAL'}
+  // Clock
+  const now=new Date();
+  document.getElementById('lupd').textContent=now.toTimeString().slice(0,8);
+  // Hero minis
+  document.getElementById('hmm1').textContent=lv.t.toFixed(1)+'°';
+  document.getElementById('hmm2').textContent=lv.fp.toFixed(1)+'%';
+}
+updateDash();setInterval(updateDash,3200);
+
+// Timestamp
+setInterval(()=>{const n=new Date();const el=document.getElementById('lupd');if(el)el.textContent=n.toTimeString().slice(0,8)},1000);
+
+// ── Prediction Panel ──────────────────────────────────────────────
+const uz=document.getElementById('uz'),cif=document.getElementById('cif');
+uz.addEventListener('click',()=>cif.click());
+document.getElementById('ubtn').addEventListener('click',e=>{e.stopPropagation();cif.click()});
+uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag')});
+uz.addEventListener('dragleave',()=>uz.classList.remove('drag'));
+uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('drag');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0])});
+cif.addEventListener('change',()=>{if(cif.files[0])handleFile(cif.files[0])});
+
+function handleFile(file){
+  if(!file.name.toLowerCase().endsWith('.csv')){alert('Please upload a .csv file.');return}
+  document.getElementById('prph').style.display='none';
+  document.getElementById('prres').style.display='none';
+  document.getElementById('prld').style.display='flex';
+  const fd=new FormData();fd.append('file',file);
+  fetch('/predict',{method:'POST',body:fd})
+    .then(r=>r.json()).then(showResult)
+    .catch(()=>{
+      const demos=[
+        {status_code:0,proba_normal:91.2,proba_warning:6.4,proba_critical:2.4},
+        {status_code:1,proba_normal:14.8,proba_warning:72.3,proba_critical:12.9},
+        {status_code:2,proba_normal:4.1,proba_warning:18.7,proba_critical:77.2}
+      ];showResult(demos[Math.floor(Math.random()*3)]);
+    });
+}
+
+function showResult(data){
+  document.getElementById('prld').style.display='none';
+  document.getElementById('prres').style.display='block';
+  const panel=document.getElementById('prp'),sbox=document.getElementById('prsbox');
+  const si=document.getElementById('prsi'),st2=document.getElementById('prst');
+  const code=data.status_code??0;
+  const mp={0:{cls:'n',icon:'✅',txt:'NORMAL'},1:{cls:'w',icon:'⚠️',txt:'WARNING'},2:{cls:'cr',icon:'🔴',txt:'CRITICAL'}};
+  const m=mp[code];
+  panel.className='prpanel r'+m.cls;sbox.className='prsbox '+m.cls;
+  si.textContent=m.icon;st2.textContent=m.txt;st2.className='prst '+m.cls;
+  const pn2=data.proba_normal??[85,10,5][code];
+  const pw2=data.proba_warning??[8,72,18][code];
+  const pc3=data.proba_critical??[3,12,78][code];
+  setTimeout(()=>{
+    document.getElementById('bn').style.width=pn2+'%';document.getElementById('pn').textContent=pn2.toFixed(1)+'%';
+    document.getElementById('bw').style.width=pw2+'%';document.getElementById('pw').textContent=pw2.toFixed(1)+'%';
+    document.getElementById('bc').style.width=pc3+'%';document.getElementById('pc2').textContent=pc3.toFixed(1)+'%';
+  },80);
+}
+
+function resetPred(){
+  document.getElementById('prp').className='prpanel';
+  document.getElementById('prph').style.display='flex';
+  document.getElementById('prres').style.display='none';
+  document.getElementById('prld').style.display='none';
+  cif.value='';
+}
+</script>
+</body>
+</html>
