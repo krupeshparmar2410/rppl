@@ -1,0 +1,272 @@
+Total slides: 14
+
+--- Slide 12 ---
+Shape 0: name='Image 0', type=PICTURE (13)
+Left: 0, Top: 0, Width: 9144000, Height: 5143500
+Shape 1: name='Text 0', type=AUTO_SHAPE (1)
+Text preview: '12 / 14'
+Left: 8046720, Top: 109728, Width: 914400, Height: 182880
+Shape 2: name='Text 1', type=AUTO_SHAPE (1)
+Text preview: 'FUTURE ROADMAP'
+Left: 274320, Top: 109728, Width: 3657600, Height: 182880
+Shape 3: name='Shape 2', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 365760, Top: 347472, Width: 754380, Height: 228600
+Shape 4: name='Text 3', type=AUTO_SHAPE (1)
+Text preview: 'ROADMAP'
+Left: 365760, Top: 365760, Width: 754380, Height: 201168
+Shape 5: name='Text 4', type=AUTO_SHAPE (1)
+Text preview: 'Future Enhancements'
+Left: 365760, Top: 640080, Width: 8412480, Height: 640080
+Shape 6: name='Shape 5', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 365760, Top: 1325880, Width: 4114800, Height: 18288
+Shape 7: name='Shape 6', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 594360, Top: 2852928, Width: 7955280, Height: 36576
+Shape 8: name='Shape 7', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 685800, Top: 2633472, Width: 411480, Height: 411480
+Shape 9: name='Image 1', type=PICTURE (13)
+Left: 749808, Top: 2688336, Width: 256032, Height: 256032
+Shape 10: name='Shape 8', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 457200, Top: 2944368, Width: 914400, Height: 201168
+Shape 11: name='Text 9', type=AUTO_SHAPE (1)
+Text preview: 'Q1 2025'
+Left: 457200, Top: 2953512, Width: 914400, Height: 182880
+Shape 12: name='Shape 10', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 320040, Top: 3246120, Width: 1325880, Height: 1691640
+Shape 13: name='Text 11', type=AUTO_SHAPE (1)
+Text preview: 'IoT Integration'
+Left: 365760, Top: 3310128, Width: 1234440, Height: 274320
+Shape 14: name='Text 12', type=AUTO_SHAPE (1)
+Text preview: 'Connect real-time sensors via MQTT/LoRaWAN protocols for live field data streaming'
+Left: 365760, Top: 3639312, Width: 1234440, Height: 1188720
+Shape 15: name='Shape 13', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 2148840, Top: 2633472, Width: 411480, Height: 411480
+Shape 16: name='Image 2', type=PICTURE (13)
+Left: 2212848, Top: 2688336, Width: 256032, Height: 256032
+Shape 17: name='Shape 14', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 1920240, Top: 2944368, Width: 914400, Height: 201168
+Shape 18: name='Text 15', type=AUTO_SHAPE (1)
+Text preview: 'Q2 2025'
+Left: 1920240, Top: 2953512, Width: 914400, Height: 182880
+Shape 19: name='Shape 16', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 1783080, Top: 3246120, Width: 1325880, Height: 1691640
+Shape 20: name='Text 17', type=AUTO_SHAPE (1)
+Text preview: 'Mobile App'
+Left: 1828800, Top: 3310128, Width: 1234440, Height: 274320
+Shape 21: name='Text 18', type=AUTO_SHAPE (1)
+Text preview: 'Native iOS/Android app with push notifications and offline monitoring capabilities'
+Left: 1828800, Top: 3639312, Width: 1234440, Height: 1188720
+Shape 22: name='Shape 19', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 3611880, Top: 2633472, Width: 411480, Height: 411480
+Shape 23: name='Image 3', type=PICTURE (13)
+Left: 3675888, Top: 2688336, Width: 256032, Height: 256032
+Shape 24: name='Shape 20', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 3383280, Top: 2944368, Width: 914400, Height: 201168
+Shape 25: name='Text 21', type=AUTO_SHAPE (1)
+Text preview: 'Q2 2025'
+Left: 3383280, Top: 2953512, Width: 914400, Height: 182880
+Shape 26: name='Shape 22', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 3246120, Top: 3246120, Width: 1325880, Height: 1691640
+Shape 27: name='Text 23', type=AUTO_SHAPE (1)
+Text preview: 'Cloud Analytics'
+Left: 3291840, Top: 3310128, Width: 1234440, Height: 274320
+Shape 28: name='Text 24', type=AUTO_SHAPE (1)
+Text preview: 'AWS/Azure integration with auto-scaling, distributed processing, and big data analytics'
+Left: 3291840, Top: 3639312, Width: 1234440, Height: 1188720
+Shape 29: name='Shape 25', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 5074920, Top: 2633472, Width: 411480, Height: 411480
+Shape 30: name='Image 4', type=PICTURE (13)
+Left: 5138928, Top: 2688336, Width: 256032, Height: 256032
+Shape 31: name='Shape 26', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 4846320, Top: 2944368, Width: 914400, Height: 201168
+Shape 32: name='Text 27', type=AUTO_SHAPE (1)
+Text preview: 'Q3 2025'
+Left: 4846320, Top: 2953512, Width: 914400, Height: 182880
+Shape 33: name='Shape 28', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 4709160, Top: 3246120, Width: 1325880, Height: 1691640
+Shape 34: name='Text 29', type=AUTO_SHAPE (1)
+Text preview: 'Predictive Alerts'
+Left: 4754880, Top: 3310128, Width: 1234440, Height: 274320
+Shape 35: name='Text 30', type=AUTO_SHAPE (1)
+Text preview: 'SMS/Email/WhatsApp automated alerts with maintenance scheduling integration'
+Left: 4754880, Top: 3639312, Width: 1234440, Height: 1188720
+Shape 36: name='Shape 31', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 6537960, Top: 2633472, Width: 411480, Height: 411480
+Shape 37: name='Image 5', type=PICTURE (13)
+Left: 6601968, Top: 2688336, Width: 256032, Height: 256032
+Shape 38: name='Shape 32', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 6309360, Top: 2944368, Width: 914400, Height: 201168
+Shape 39: name='Text 33', type=AUTO_SHAPE (1)
+Text preview: 'Q3 2025'
+Left: 6309360, Top: 2953512, Width: 914400, Height: 182880
+Shape 40: name='Shape 34', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 6172200, Top: 3246120, Width: 1325880, Height: 1691640
+Shape 41: name='Text 35', type=AUTO_SHAPE (1)
+Text preview: 'Edge Computing'
+Left: 6217920, Top: 3310128, Width: 1234440, Height: 274320
+Shape 42: name='Text 36', type=AUTO_SHAPE (1)
+Text preview: 'On-device ML inference for zero-latency predictions without internet connectivity'
+Left: 6217920, Top: 3639312, Width: 1234440, Height: 1188720
+Shape 43: name='Shape 37', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 8001000, Top: 2633472, Width: 411480, Height: 411480
+Shape 44: name='Image 6', type=PICTURE (13)
+Left: 8065008, Top: 2688336, Width: 256032, Height: 256032
+Shape 45: name='Shape 38', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 7772400, Top: 2944368, Width: 914400, Height: 201168
+Shape 46: name='Text 39', type=AUTO_SHAPE (1)
+Text preview: 'Q4 2025'
+Left: 7772400, Top: 2953512, Width: 914400, Height: 182880
+Shape 47: name='Shape 40', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 7635240, Top: 3246120, Width: 1325880, Height: 1691640
+Shape 48: name='Text 41', type=AUTO_SHAPE (1)
+Text preview: 'Digital Twin'
+Left: 7680960, Top: 3310128, Width: 1234440, Height: 274320
+Shape 49: name='Text 42', type=AUTO_SHAPE (1)
+Text preview: '3D digital twin simulation for transformer lifecycle modeling and virtual testing'
+Left: 7680960, Top: 3639312, Width: 1234440, Height: 1188720
+
+--- Slide 13 ---
+Shape 0: name='Image 0', type=PICTURE (13)
+Left: 0, Top: 0, Width: 9144000, Height: 5143500
+Shape 1: name='Text 0', type=AUTO_SHAPE (1)
+Text preview: '13 / 14'
+Left: 8046720, Top: 109728, Width: 914400, Height: 182880
+Shape 2: name='Text 1', type=AUTO_SHAPE (1)
+Text preview: 'CONCLUSION'
+Left: 274320, Top: 109728, Width: 3657600, Height: 182880
+Shape 3: name='Image 1', type=PICTURE (13)
+Left: 0, Top: 0, Width: 9144000, Height: 5143500
+Shape 4: name='Shape 2', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 3749040, Top: 274320, Width: 960120, Height: 228600
+Shape 5: name='Text 3', type=AUTO_SHAPE (1)
+Text preview: 'CONCLUSION'
+Left: 3749040, Top: 292608, Width: 960120, Height: 201168
+Shape 6: name='Text 4', type=AUTO_SHAPE (1)
+Text preview: 'AI-driven predictive maintenance'
+Left: 457200, Top: 777240, Width: 8229600, Height: 640080
+Shape 7: name='Text 5', type=AUTO_SHAPE (1)
+Text preview: 'can revolutionize industrial transformer'
+Left: 457200, Top: 1389888, Width: 8229600, Height: 594360
+Shape 8: name='Text 6', type=AUTO_SHAPE (1)
+Text preview: 'safety and efficiency'
+Left: 457200, Top: 1965960, Width: 8229600, Height: 594360
+Shape 9: name='Shape 7', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 640080, Top: 2743200, Width: 1828800, Height: 1005840
+Shape 10: name='Text 8', type=AUTO_SHAPE (1)
+Text preview: '97.3%'
+Left: 685800, Top: 2816352, Width: 1737360, Height: 502920
+Shape 11: name='Text 9', type=AUTO_SHAPE (1)
+Text preview: 'Model Accuracy'
+Left: 685800, Top: 3355848, Width: 1737360, Height: 274320
+Shape 12: name='Shape 10', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 2651760, Top: 2743200, Width: 1828800, Height: 1005840
+Shape 13: name='Text 11', type=AUTO_SHAPE (1)
+Text preview: '5'
+Left: 2697480, Top: 2816352, Width: 1737360, Height: 502920
+Shape 14: name='Text 12', type=AUTO_SHAPE (1)
+Text preview: 'ML Algorithms Tested'
+Left: 2697480, Top: 3355848, Width: 1737360, Height: 274320
+Shape 15: name='Shape 13', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 4663440, Top: 2743200, Width: 1828800, Height: 1005840
+Shape 16: name='Text 14', type=AUTO_SHAPE (1)
+Text preview: 'Live'
+Left: 4709160, Top: 2816352, Width: 1737360, Height: 502920
+Shape 17: name='Text 15', type=AUTO_SHAPE (1)
+Text preview: 'Cloud Deployment'
+Left: 4709160, Top: 3355848, Width: 1737360, Height: 274320
+Shape 18: name='Shape 16', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 6675120, Top: 2743200, Width: 1828800, Height: 1005840
+Shape 19: name='Text 17', type=AUTO_SHAPE (1)
+Text preview: '12'
+Left: 6720840, Top: 2816352, Width: 1737360, Height: 502920
+Shape 20: name='Text 18', type=AUTO_SHAPE (1)
+Text preview: 'Features Analyzed'
+Left: 6720840, Top: 3355848, Width: 1737360, Height: 274320
+Shape 21: name='Text 19', type=AUTO_SHAPE (1)
+Text preview: 'RPPL — Built for the future of industrial intelligence'
+Left: 457200, Top: 3931920, Width: 8229600, Height: 320040
+Shape 22: name='Shape 20', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 2286000, Top: 4343400, Width: 4572000, Height: 548640
+Shape 23: name='Text 21', type=AUTO_SHAPE (1)
+Text preview: '🌐  rppl-cu13.onrender.com'
+Left: 2377440, Top: 4434840, Width: 4389120, Height: 347472
+
+--- Slide 14 ---
+Shape 0: name='Image 0', type=PICTURE (13)
+Left: 0, Top: 0, Width: 9144000, Height: 5143500
+Shape 1: name='Text 0', type=AUTO_SHAPE (1)
+Text preview: '14 / 14'
+Left: 8046720, Top: 109728, Width: 914400, Height: 182880
+Shape 2: name='Text 1', type=AUTO_SHAPE (1)
+Text preview: 'THANK YOU'
+Left: 274320, Top: 109728, Width: 3657600, Height: 182880
+Shape 3: name='Text 2', type=AUTO_SHAPE (1)
+Text preview: 'Thank'
+Left: 457200, Top: 457200, Width: 8229600, Height: 1005840
+Shape 4: name='Text 3', type=AUTO_SHAPE (1)
+Text preview: 'You'
+Left: 457200, Top: 1417320, Width: 8229600, Height: 914400
+Shape 5: name='Shape 4', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 2286000, Top: 2423160, Width: 4572000, Height: 18288
+Shape 6: name='Text 5', type=AUTO_SHAPE (1)
+Text preview: 'RPPL — AI Powered Transformer Health Monitoring System'
+Left: 457200, Top: 2514600, Width: 8229600, Height: 320040
+Shape 7: name='Shape 6', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 457200, Top: 2926080, Width: 8229600, Height: 2011680
+Shape 8: name='Text 7', type=AUTO_SHAPE (1)
+Text preview: 'B.Tech Final Year  •  Computer Science & Engineering  •  2024–25'
+Left: 640080, Top: 3035808, Width: 7772400, Height: 274320
+Shape 9: name='Image 1', type=PICTURE (13)
+Left: 1143000, Top: 3410712, Width: 256032, Height: 256032
+Shape 10: name='Text 8', type=AUTO_SHAPE (1)
+Text preview: 'your.email@example.com'
+Left: 640080, Top: 3749040, Width: 1920240, Height: 274320
+Shape 11: name='Image 2', type=PICTURE (13)
+Left: 3172968, Top: 3410712, Width: 256032, Height: 256032
+Shape 12: name='Text 9', type=AUTO_SHAPE (1)
+Text preview: 'github.com/yourusername'
+Left: 2670048, Top: 3749040, Width: 1920240, Height: 274320
+Shape 13: name='Image 3', type=PICTURE (13)
+Left: 5202936, Top: 3410712, Width: 256032, Height: 256032
+Shape 14: name='Text 10', type=AUTO_SHAPE (1)
+Text preview: 'linkedin.com/in/yourprofile'
+Left: 4700016, Top: 3749040, Width: 1920240, Height: 274320
+Shape 15: name='Image 4', type=PICTURE (13)
+Left: 7232904, Top: 3410712, Width: 256032, Height: 256032
+Shape 16: name='Text 11', type=AUTO_SHAPE (1)
+Text preview: '+91 00000 00000'
+Left: 6729984, Top: 3749040, Width: 1920240, Height: 274320
+Shape 17: name='Shape 12', type=AUTO_SHAPE (1)
+Text preview: ''
+Left: 0, Top: 4846320, Width: 9144000, Height: 297180
+Shape 18: name='Text 13', type=AUTO_SHAPE (1)
+Text preview: 'Powered by Python  •  Flask  •  XGBoost  •  Scikit-learn  •  Deployed on Render'
+Left: 274320, Top: 4873752, Width: 8595360, Height: 228600

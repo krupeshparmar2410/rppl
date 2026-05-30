@@ -373,32 +373,35 @@ class LiveDashboard {
   }
 
   update() {
-    const delta = (v, range) => v + (Math.random() - 0.5) * range;
+    fetch('/api/live-data')
+      .then(r => r.json())
+      .then(data => {
+        this.metrics.healthScore = data.health_score;
+        this.metrics.temperature = data.oti;
+        this.metrics.voltage = (data.vl1 + data.vl2 + data.vl3) / 3;
+        this.metrics.power = data.kw;
+        this.metrics.failureProb = data.failure_prob;
 
-    this.metrics.healthScore = Math.max(60, Math.min(100, delta(this.metrics.healthScore, 3)));
-    this.metrics.temperature = Math.max(35, Math.min(75, delta(this.metrics.temperature, 1.5)));
-    this.metrics.voltage = Math.max(230, Math.min(255, delta(this.metrics.voltage, 1)));
-    this.metrics.power = Math.max(40, Math.min(75, delta(this.metrics.power, 2)));
-    this.metrics.failureProb = Math.max(2, Math.min(25, delta(this.metrics.failureProb, 1)));
+        // Update DOM
+        this.updateEl('live-health', this.metrics.healthScore.toFixed(1), '%');
+        this.updateEl('live-temp', this.metrics.temperature.toFixed(1), '°C');
+        this.updateEl('live-voltage', this.metrics.voltage.toFixed(1), 'V');
+        this.updateEl('live-power', this.metrics.power.toFixed(1), 'kW');
+        this.updateEl('live-failure', this.metrics.failureProb.toFixed(1), '%');
 
-    // Update DOM
-    this.updateEl('live-health', this.metrics.healthScore.toFixed(1), '%');
-    this.updateEl('live-temp', this.metrics.temperature.toFixed(1), '°C');
-    this.updateEl('live-voltage', this.metrics.voltage.toFixed(1), 'V');
-    this.updateEl('live-power', this.metrics.power.toFixed(1), 'kW');
-    this.updateEl('live-failure', this.metrics.failureProb.toFixed(1), '%');
+        // Update circular progress
+        this.updateCircular('health-progress', this.metrics.healthScore);
+        this.updateCircular('failure-progress', this.metrics.failureProb, true);
 
-    // Update circular progress
-    this.updateCircular('health-progress', this.metrics.healthScore);
-    this.updateCircular('failure-progress', this.metrics.failureProb, true);
+        // Update progress bars
+        this.updateBar('temp-bar', (this.metrics.temperature - 35) / 40 * 100);
+        this.updateBar('voltage-bar', ((this.metrics.voltage - 220) / 50) * 100);
+        this.updateBar('power-bar', (this.metrics.power / 100) * 100);
 
-    // Update progress bars
-    this.updateBar('temp-bar', (this.metrics.temperature - 35) / 40 * 100);
-    this.updateBar('voltage-bar', ((this.metrics.voltage - 220) / 50) * 100);
-    this.updateBar('power-bar', (this.metrics.power / 100) * 100);
-
-    // Status badge
-    this.updateStatus();
+        // Status badge
+        this.updateStatus(data.status_code, data.status);
+      })
+      .catch(e => console.log('Live data error:', e));
   }
 
   updateEl(id, val, _suffix) {
@@ -423,15 +426,14 @@ class LiveDashboard {
     if (el) el.style.width = `${Math.max(0, Math.min(100, pct))}%`;
   }
 
-  updateStatus() {
+  updateStatus(code, label) {
     const statusEl = document.getElementById('live-status-badge');
     const statusTextEl = document.getElementById('live-status-text');
     if (!statusEl || !statusTextEl) return;
-    const h = this.metrics.healthScore;
     let cls, txt;
-    if (h >= 80) { cls = 'normal'; txt = '● NORMAL'; }
-    else if (h >= 60) { cls = 'warning'; txt = '◉ WARNING'; }
-    else { cls = 'critical'; txt = '◈ CRITICAL'; }
+    if (code === 0) { cls = 'normal'; txt = '● ' + label.toUpperCase(); }
+    else if (code === 1) { cls = 'warning'; txt = '◉ ' + label.toUpperCase(); }
+    else { cls = 'critical'; txt = '◈ ' + label.toUpperCase(); }
     statusEl.className = `status-badge ${cls}`;
     statusTextEl.textContent = txt;
   }
@@ -509,20 +511,28 @@ function initPrediction() {
   function showResult(data) {
     loading.style.display = 'none';
     result.style.display = 'block';
+    
+    if(!data.success) {
+      showNotification(data.error || 'Prediction failed.', 'error');
+      return;
+    }
 
     const panel = document.querySelector('.prediction-result-panel');
     const statusBox = document.getElementById('pred-status-box');
     const statusIcon = document.getElementById('pred-status-icon');
     const statusText = document.getElementById('pred-status-text');
 
-    const statusCode = data.status_code ?? data.prediction ?? 0;
+    const statusCode = data.status_code ?? 0;
     const statusMap = {
-      0: { cls: 'normal', icon: '✅', text: 'NORMAL', label: 'Transformer operating normally.' },
-      1: { cls: 'warning', icon: '⚠️', text: 'WARNING', label: 'Monitor closely — plan maintenance.' },
-      2: { cls: 'critical', icon: '🔴', text: 'CRITICAL', label: 'Immediate inspection required!' },
+      0: { cls: 'normal', icon: '✅', text: 'NORMAL' },
+      1: { cls: 'warning', icon: '⚠️', text: 'WARNING' },
+      2: { cls: 'critical', icon: '🔴', text: 'CRITICAL' },
     };
-
-    const { cls, icon, text } = statusMap[statusCode] || statusMap[0];
+    
+    let { cls, icon, text } = statusMap[statusCode] || statusMap[0];
+    if(data.status_label === 'Uncertain') {
+      cls = 'warning'; icon = '❓'; text = 'UNCERTAIN';
+    }
 
     panel.className = `prediction-result-panel result-${cls}`;
     statusBox.className = `prediction-status-large ${cls}`;
@@ -530,19 +540,87 @@ function initPrediction() {
     statusText.textContent = text;
     statusText.className = `prediction-status-text ${cls}`;
 
-    // Probability bars
-    const pn = data.proba_normal ?? (statusCode === 0 ? 85 : 10);
-    const pw = data.proba_warning ?? (statusCode === 1 ? 75 : 12);
-    const pc = data.proba_critical ?? (statusCode === 2 ? 78 : 5);
+    // Populate Stats
+    if(data.summary) {
+      document.getElementById('stat-total').textContent = data.summary.total_records;
+      document.getElementById('stat-normal').textContent = data.summary.normal_count;
+      document.getElementById('stat-warning').textContent = data.summary.warning_count;
+      document.getElementById('stat-critical').textContent = data.summary.critical_count;
+      
+      setTimeout(() => {
+        setBar('bar-normal', data.summary.normal_pct, '#10B981');
+        setBar('bar-warning', data.summary.warning_pct, '#F59E0B');
+        setBar('bar-critical', data.summary.critical_pct, '#EF4444');
+        document.getElementById('pct-normal').textContent = `${data.summary.normal_pct.toFixed(1)}%`;
+        document.getElementById('pct-warning').textContent = `${data.summary.warning_pct.toFixed(1)}%`;
+        document.getElementById('pct-critical').textContent = `${data.summary.critical_pct.toFixed(1)}%`;
+      }, 100);
+    }
+    
+    // Confidence & Reliability
+    const confEl = document.getElementById('pred-confidence');
+    if(confEl && data.confidence) {
+      confEl.textContent = `${data.confidence.toFixed(1)}%`;
+    }
+    
+    const relEl = document.getElementById('pred-reliability');
+    if(relEl && data.reliability) {
+      relEl.textContent = `● ${data.reliability.toUpperCase()}`;
+      if(data.reliability.includes('High')) relEl.style.color = 'var(--emerald)';
+      else if(data.reliability.includes('Medium')) relEl.style.color = 'var(--orange)';
+      else relEl.style.color = 'var(--red)';
+    }
 
-    setTimeout(() => {
-      setBar('bar-normal', pn, '#10B981');
-      setBar('bar-warning', pw, '#F59E0B');
-      setBar('bar-critical', pc, '#EF4444');
-      document.getElementById('pct-normal').textContent = `${pn.toFixed(1)}%`;
-      document.getElementById('pct-warning').textContent = `${pw.toFixed(1)}%`;
-      document.getElementById('pct-critical').textContent = `${pc.toFixed(1)}%`;
-    }, 100);
+    // Recommendations
+    const recsEl = document.getElementById('pred-recommendations');
+    if(recsEl && data.recommendations) {
+      recsEl.innerHTML = '';
+      data.recommendations.forEach(r => {
+        const li = document.createElement('li');
+        li.textContent = r;
+        li.style.marginBottom = '0.3rem';
+        recsEl.appendChild(li);
+      });
+    }
+
+    // Feature Importance Chart
+    if(data.top_features && data.top_features.length > 0) {
+      renderFeatureChart(data.top_features);
+    }
+  }
+
+  function renderFeatureChart(features) {
+    const ctx = document.getElementById('featureChart');
+    if(!ctx) return;
+    
+    if(window.featChartInst) window.featChartInst.destroy();
+    
+    window.featChartInst = new Chart(ctx.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: features.map(f => f.feature),
+        datasets: [{
+          data: features.map(f => f.importance),
+          backgroundColor: 'rgba(59,130,246,0.6)',
+          borderColor: 'rgba(59,130,246,1)',
+          borderWidth: 1,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { display: false },
+          y: { 
+            ticks: { color: '#94A3B8', font: { family: "'Share Tech Mono', monospace", size: 10 } },
+            grid: { display: false }
+          }
+        }
+      }
+    });
   }
 
   function setBar(id, pct, color) {
@@ -550,6 +628,22 @@ function initPrediction() {
     if (el) { el.style.width = `${pct}%`; el.style.background = color; }
   }
 }
+
+// ── PDF Export ───────────────────────────────────────────────────
+window.downloadPDF = function() {
+  const element = document.getElementById('pred-result');
+  const opt = {
+    margin:       0.5,
+    filename:     'Transformer_Health_Report.pdf',
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2 },
+    jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+  };
+  
+  html2pdf().set(opt).from(element).save().then(() => {
+    showNotification('PDF Report Downloaded Successfully', 'success');
+  });
+};
 
 // ── Notification ─────────────────────────────────────────────────
 function showNotification(message, type = 'info') {

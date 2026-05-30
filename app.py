@@ -7,17 +7,22 @@
 
 import os
 import io
-import json
-import math
 import time
-import random
 import datetime
 from collections import Counter
 
-import numpy as np
 import pandas as pd
 import joblib
 from flask import Flask, render_template, request, jsonify
+from werkzeug.utils import secure_filename
+
+# Import our new modules
+from utils.logger import get_logger
+from utils.error_handlers import register_error_handlers
+from validators.input_validator import validate_sensor_data
+from services.prediction_service import run_prediction
+from services.history_service import add_history
+from services.simulation_service import generate_live_data
 
 # ── App Configuration ─────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -26,22 +31,9 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024   # 50 MB max upload
 ALLOWED_EXTENSIONS = {'csv'}
 
 os.makedirs('uploads', exist_ok=True)
+logger = get_logger("TransformerApp")
 
-# ── Load ML Model ─────────────────────────────────────────────────────────
-model        = None
-feature_list = None
-
-def load_model():
-    global model, feature_list
-    try:
-        model        = joblib.load('transformer_health_model.pkl')
-        feature_list = joblib.load('feature_names.pkl')
-        print(f"[+] Model loaded  : {type(model).__name__}")
-        print(f"[+] Features      : {len(feature_list)}")
-    except FileNotFoundError as e:
-        print(f"[!] Model missing : {e}  — run the notebook first.")
-
-load_model()
+register_error_handlers(app)
 
 # ── Status Mapping ────────────────────────────────────────────────────────
 STATUS_MAP = {
@@ -53,6 +45,25 @@ STATUS_MAP = {
         'action':'Schedule IMMEDIATE inspection!'},
 }
 
+# ── Load ML Model ─────────────────────────────────────────────────────────
+class ModelManager:
+    def __init__(self):
+        self.model = None
+        self.feature_list = None
+        self.version = "1.0.0"
+        self.training_date = "2024-05-15"
+        
+    def load(self):
+        try:
+            self.model = joblib.load('models/transformer_v1.pkl')
+            self.feature_list = joblib.load('models/feature_names.pkl')
+            logger.info(f"Model loaded: {type(self.model).__name__}")
+        except Exception as e:
+            logger.error(f"Failed to load model: {e}")
+
+model_manager = ModelManager()
+model_manager.load()
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -62,12 +73,29 @@ def allowed_file(filename):
 def index():
     return render_template('index.html')
 
+# ── Health Check Endpoint ─────────────────────────────────────────────────
+@app.route('/health')
+def health_check():
+    return jsonify({"status": "healthy"})
+
+# ── Model Info Endpoint ───────────────────────────────────────────────────
+@app.route('/api/model-info')
+def model_info():
+    return jsonify({
+        "model_name": "Transformer Health Monitor",
+        "algorithm": type(model_manager.model).__name__ if model_manager.model else "Unknown",
+        "version": model_manager.version,
+        "features": len(model_manager.feature_list) if model_manager.feature_list else 0,
+        "training_date": model_manager.training_date
+    })
+
 # ── Prediction Endpoint ───────────────────────────────────────────────────
 @app.route('/predict', methods=['POST'])
 def predict():
-    if model is None or feature_list is None:
-        return jsonify({'success': False,
-                        'error': 'ML model not loaded. Run the notebook first.'}), 503
+    start_time = time.time()
+    
+    if model_manager.model is None or model_manager.feature_list is None:
+        return jsonify({'success': False, 'error': 'ML model not loaded.'}), 503
 
     if 'file' not in request.files:
         return jsonify({'success': False, 'error': 'No file in request.'}), 400
@@ -76,7 +104,11 @@ def predict():
     if file.filename == '' or not allowed_file(file.filename):
         return jsonify({'success': False, 'error': 'Please upload a valid .csv file.'}), 400
 
+    filename = secure_filename(file.filename)
+    
     try:
+        # For large files, we could read in chunks, but for now we read all
+        # pd.read_csv handles up to 10k rows very quickly
         df = pd.read_csv(io.StringIO(file.read().decode('utf-8')))
     except Exception as e:
         return jsonify({'success': False, 'error': f'CSV parse error: {e}'}), 400
@@ -84,80 +116,67 @@ def predict():
     if df.empty:
         return jsonify({'success': False, 'error': 'Uploaded CSV is empty.'}), 400
 
-    # Align columns
-    available = [f for f in feature_list if f in df.columns]
-    missing   = [f for f in feature_list if f not in df.columns]
-    if not available:
-        return jsonify({'success': False,
-                        'error': f'No matching features. Need: {feature_list[:5]}...'}), 400
-
-    df_model = df[available].copy()
-    for col in missing:
-        df_model[col] = 0.0
-    df_model = df_model[feature_list].fillna(0)
+    # Validation
+    is_valid, df_clean, quality_report, err_msg = validate_sensor_data(df, model_manager.feature_list)
+    
+    if not is_valid:
+        return jsonify({
+            'success': False, 
+            'error': err_msg,
+            'quality_report': quality_report
+        }), 400
 
     try:
-        preds  = model.predict(df_model)
-        probas = model.predict_proba(df_model)
-        if len(preds) > 1:
-            pred_code = Counter(preds).most_common(1)[0][0]
-            avg_proba = probas.mean(axis=0)
-        else:
-            pred_code = int(preds[0])
-            avg_proba = probas[0]
+        # Run advanced prediction logic
+        results = run_prediction(model_manager.model, model_manager.feature_list, df_clean)
     except Exception as e:
+        logger.error(f"Prediction error: {e}")
         return jsonify({'success': False, 'error': f'Prediction error: {e}'}), 500
 
-    info = STATUS_MAP.get(int(pred_code), STATUS_MAP[0])
+    pred_code = results['overall_status_code']
+    info = STATUS_MAP.get(pred_code, STATUS_MAP[0])
+    
+    # Save History
+    add_history(
+        health_score=results['health_score'],
+        status=results['status_label'],
+        confidence=results['confidence'],
+        total_records=results['summary']['total_records']
+    )
+
+    elapsed_time = time.time() - start_time
+    logger.info(f"Processed {len(df_clean)} rows in {elapsed_time:.3f}s. Result: {results['status_label']}")
+
     return jsonify({
         'success'         : True,
-        'status'          : info['label'],
-        'status_code'     : int(pred_code),
+        'status'          : results['status_label'],
+        'status_code'     : pred_code,
         'status_class'    : info['class'],
         'icon'            : info['icon'],
-        'action'          : info['action'],
         'color'           : info['color'],
-        'proba_normal'    : round(float(avg_proba[0]) * 100, 2),
-        'proba_warning'   : round(float(avg_proba[1]) * 100, 2),
-        'proba_critical'  : round(float(avg_proba[2]) * 100, 2),
-        'rows_processed'  : len(df),
-        'features_used'   : len(available),
-        'features_missing': len(missing),
+        'confidence'      : results['confidence'],
+        'reliability'     : results['reliability'],
+        'health_score'    : results['health_score'],
+        'recommendations' : results['recommendations'],
+        'summary'         : results['summary'],
+        'top_features'    : results['top_features'],
+        'quality_report'  : quality_report,
+        'processing_time' : round(elapsed_time, 3)
     })
 
 # ── Live Sensor Data API ──────────────────────────────────────────────────
 @app.route('/api/live-data')
 def live_data():
-    t = time.time()
-    def noisy(base, amp, freq=0.05):
-        return round(base + amp * math.sin(t * freq) + random.uniform(-amp*0.3, amp*0.3), 2)
-
-    health = noisy(87.4, 4.0)
-    status_code = 0 if health >= 80 else (1 if health >= 60 else 2)
-
-    return jsonify({
-        'vl1': noisy(242.0, 3.0),   'vl2': noisy(241.5, 3.0),  'vl3': noisy(243.0, 3.0),
-        'il1': noisy(95.0,  5.0),   'il2': noisy(97.0,  5.0),  'il3': noisy(94.0,  5.0),
-        'oti': noisy(46.2,  3.0, 0.02),
-        'avg_pf': noisy(0.98, 0.02),
-        'kw': noisy(55.4, 5.0),     'kva': noisy(57.0, 5.0),   'kvar': noisy(12.0, 2.0),
-        'v_imbalance': noisy(0.31, 0.15),
-        'i_imbalance': noisy(1.5,  0.4),
-        'health_score': health,
-        'failure_prob': noisy(8.3, 2.0),
-        'frequency': noisy(50.0, 0.1),
-        'status': STATUS_MAP[status_code]['label'],
-        'status_code': status_code,
-        'timestamp': datetime.datetime.now().isoformat(),
-    })
+    return jsonify(generate_live_data())
 
 # ── Historical Chart Data API ─────────────────────────────────────────────
 @app.route('/api/chart-data')
 def chart_data():
-    now    = datetime.datetime.now()
+    now = datetime.datetime.now()
     labels = [(now - datetime.timedelta(minutes=(30-i)*5)).strftime('%H:%M') for i in range(30)]
 
     def series(base, amp, freq=0.2):
+        import math, random
         return [round(base + amp*math.sin(i*freq) + random.uniform(-amp*0.3, amp*0.3), 2)
                 for i in range(30)]
 
@@ -171,20 +190,12 @@ def chart_data():
         'health_score': series(87.4,  10.0),
     })
 
-# ── Error Handlers ────────────────────────────────────────────────────────
-@app.errorhandler(404)
-def not_found(e):
-    return render_template('index.html'), 404
-
-@app.errorhandler(413)
-def too_large(e):
-    return jsonify({'success': False, 'error': 'File too large. Max 50MB.'}), 413
-
 # ─────────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
     print("=" * 55)
     print("  [SYSTEM] TRANSFORMER AI — Health Monitoring System")
-    print(f"  Model : {'[READY] Ready' if model else '[ERROR] Not found'}")
+    print(f"  Model : {'[READY] Ready' if model_manager.model else '[ERROR] Not found'}")
     print("  URL   : http://localhost:5000")
     print("=" * 55)
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Debug mode is disabled for production readiness
+    app.run(debug=False, host='0.0.0.0', port=5000)
