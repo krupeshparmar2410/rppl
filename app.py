@@ -146,6 +146,8 @@ def index():
     req_id = getattr(g, 'request_id', 'N/A')
     try:
         transformers = list(transformers_col.find({}))
+        for t in transformers:
+            t["location"] = t.get("city") or t.get("location")
     except Exception as e:
         logger.error(f"RequestID={req_id} | Failed to fetch transformers for homepage: {e}")
         transformers = []
@@ -622,17 +624,22 @@ def fault_history():
     filter_severity = request.args.get('filter_severity')
     filter_priority = request.args.get('filter_priority')
     page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 10))
+    if per_page not in [10, 25, 50]:
+        per_page = 10
     
     records, total = get_history(
         search=search, sort_by=sort_by, filter_health=filter_health,
         filter_maintenance=filter_maintenance, filter_severity=filter_severity,
-        filter_priority=filter_priority, page=page, per_page=15
+        filter_priority=filter_priority, page=page, per_page=per_page
     )
     
-    total_pages = max(1, (total + 14) // 15)
+    total_pages = max(1, (total + per_page - 1) // per_page)
     
     try:
         transformers = list(transformers_col.find({}))
+        for t in transformers:
+            t["location"] = t.get("city") or t.get("location")
     except Exception as e:
         logger.error(f"RequestID={req_id} | Database list find query failed for transformers: {e}")
         transformers = []
@@ -641,6 +648,7 @@ def fault_history():
         'fault_history.html', 
         records=records, 
         page=page, 
+        per_page=per_page,
         total_pages=total_pages,
         total_records=total,
         sort_by=sort_by,
@@ -655,6 +663,7 @@ def fault_history():
 # ── Update Maintenance Workflow Endpoint ──────────────────────────────────
 @app.route('/api/update-maintenance', methods=['POST'])
 def update_maintenance():
+    from bson import ObjectId
     data = request.get_json() or {}
     record_id = data.get('record_id')
     status = data.get('status')
@@ -664,12 +673,52 @@ def update_maintenance():
         logger.warning(f"RequestID={req_id} | Missing payload parameters inside update_maintenance request.")
         return jsonify({"success": False, "error": "record_id and status are required."}), 400
         
-    allowed_statuses = ["Pending", "Acknowledged", "Assigned", "In Progress", "Resolved"]
+    allowed_statuses = ["Pending", "Acknowledged", "Assigned", "In Progress", "Resolved", "Reopened"]
     if status not in allowed_statuses:
         logger.warning(f"RequestID={req_id} | Invalid maintenance status value received: '{status}'.")
         return jsonify({"success": False, "error": f"Invalid status. Allowed values: {allowed_statuses}"}), 400
         
-    success = update_maintenance_status(record_id, status)
+    assigned_engineer = data.get('assigned_engineer')
+    engineer_email = data.get('engineer_email')
+    engineer_phone = data.get('engineer_phone')
+    reopen_reason = data.get('reopen_reason')
+    resolution_notes = data.get('resolution_notes')
+    resolved_by = data.get('resolved_by')
+    updated_by = data.get('updated_by') or ("System" if status == "Pending" else "Technician")
+
+    # Fetch existing document for email notifications on assignment
+    if status == "Assigned":
+        try:
+            doc = history_col.find_one({"_id": ObjectId(record_id)})
+            if doc:
+                t_id = doc.get("transformer_id")
+                f_type = doc.get("fault_type")
+                f_priority = doc.get("fault_priority") or "P3"
+                if engineer_email:
+                    from services.email_service import send_engineer_assignment_email
+                    send_engineer_assignment_email(
+                        transformer_id=t_id,
+                        fault_type=f_type,
+                        fault_priority=f_priority,
+                        assigned_engineer=assigned_engineer or "Field Engineer",
+                        engineer_email=engineer_email,
+                        engineer_phone=engineer_phone or "N/A",
+                        assignment_timestamp=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    )
+        except Exception as e:
+            logger.error(f"RequestID={req_id} | Failed to send assignment notification email: {e}")
+
+    success = update_maintenance_status(
+        record_id=record_id,
+        status=status,
+        assigned_engineer=assigned_engineer,
+        engineer_email=engineer_email,
+        engineer_phone=engineer_phone,
+        reopen_reason=reopen_reason,
+        resolution_notes=resolution_notes,
+        resolved_by=resolved_by,
+        updated_by=updated_by
+    )
     if success:
         return jsonify({"success": True})
     
@@ -679,9 +728,20 @@ def update_maintenance():
 # ── Reporting Exports (CSV / Excel / PDF) ──────────────────────────────────
 @app.route('/fault-history/export/csv')
 def export_csv():
-    """Exports history to CSV file."""
+    """Exports history to CSV file, respecting active filters."""
     req_id = getattr(g, 'request_id', 'N/A')
-    records, _ = get_history(page=1, per_page=10000)
+    search = request.args.get('search')
+    filter_health = request.args.get('filter_health')
+    filter_maintenance = request.args.get('filter_maintenance')
+    filter_severity = request.args.get('filter_severity')
+    filter_priority = request.args.get('filter_priority')
+    
+    records, _ = get_history(
+        search=search, sort_by="timestamp_desc", filter_health=filter_health,
+        filter_maintenance=filter_maintenance, filter_severity=filter_severity,
+        filter_priority=filter_priority, page=1, per_page=10000
+    )
+    
     if not records:
         logger.warning(f"RequestID={req_id} | No records found for CSV export.")
         return Response("No records available to export.", status=400)
@@ -689,8 +749,12 @@ def export_csv():
     df = pd.DataFrame(records)
     columns_to_keep = [
         "transformer_id", "location", "service_station", "predicted_health", 
-        "fault_severity", "fault_priority", "confidence_score", 
-        "maintenance_status", "DeviceTimeStamp"
+        "fault_type", "fault_severity", "fault_priority", "health_score", 
+        "DeviceTimeStamp", "maintenance_status", "nearest_service_station", 
+        "distance_km", "sla_target_minutes", "sla_breached", 
+        "assigned_engineer", "engineer_email", "engineer_phone", 
+        "response_time_minutes", "repair_time_minutes", "resolution_notes", 
+        "resolved_by"
     ]
     columns_to_keep = [c for c in columns_to_keep if c in df.columns]
     df_out = df[columns_to_keep]
@@ -707,9 +771,20 @@ def export_csv():
 
 @app.route('/fault-history/export/excel')
 def export_excel():
-    """Exports history to Excel (.xlsx) file using openpyxl."""
+    """Exports history to Excel (.xlsx) file, respecting active filters."""
     req_id = getattr(g, 'request_id', 'N/A')
-    records, _ = get_history(page=1, per_page=10000)
+    search = request.args.get('search')
+    filter_health = request.args.get('filter_health')
+    filter_maintenance = request.args.get('filter_maintenance')
+    filter_severity = request.args.get('filter_severity')
+    filter_priority = request.args.get('filter_priority')
+    
+    records, _ = get_history(
+        search=search, sort_by="timestamp_desc", filter_health=filter_health,
+        filter_maintenance=filter_maintenance, filter_severity=filter_severity,
+        filter_priority=filter_priority, page=1, per_page=10000
+    )
+    
     if not records:
         logger.warning(f"RequestID={req_id} | No records found for Excel export.")
         return Response("No records available to export.", status=400)
@@ -717,8 +792,12 @@ def export_excel():
     df = pd.DataFrame(records)
     columns_to_keep = [
         "transformer_id", "location", "service_station", "predicted_health", 
-        "fault_severity", "fault_priority", "confidence_score", 
-        "maintenance_status", "DeviceTimeStamp"
+        "fault_type", "fault_severity", "fault_priority", "health_score", 
+        "DeviceTimeStamp", "maintenance_status", "nearest_service_station", 
+        "distance_km", "sla_target_minutes", "sla_breached", 
+        "assigned_engineer", "engineer_email", "engineer_phone", 
+        "response_time_minutes", "repair_time_minutes", "resolution_notes", 
+        "resolved_by"
     ]
     columns_to_keep = [c for c in columns_to_keep if c in df.columns]
     df_out = df[columns_to_keep]
@@ -738,9 +817,20 @@ def export_excel():
 
 @app.route('/fault-history/export/pdf')
 def export_pdf():
-    """Renders a print-ready HTML page that auto-opens print options (PDF)."""
-    records, _ = get_history(page=1, per_page=500)
-    return render_template('fault_history_pdf.html', records=records)
+    """Renders a print-ready HTML page (PDF) respecting active filters."""
+    search = request.args.get('search')
+    filter_health = request.args.get('filter_health')
+    filter_maintenance = request.args.get('filter_maintenance')
+    filter_severity = request.args.get('filter_severity')
+    filter_priority = request.args.get('filter_priority')
+    
+    records, _ = get_history(
+        search=search, sort_by="timestamp_desc", filter_health=filter_health,
+        filter_maintenance=filter_maintenance, filter_severity=filter_severity,
+        filter_priority=filter_priority, page=1, per_page=500
+    )
+    import datetime as dt_module
+    return render_template('fault_history_pdf.html', records=records, datetime=dt_module)
 
 # ─────────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':

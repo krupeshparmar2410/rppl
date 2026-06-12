@@ -8,60 +8,65 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #333;
-            margin: 20px;
-            font-size: 11px;
+            margin: 10px;
+            font-size: 9px;
         }
         .header {
             text-align: center;
             border-bottom: 2px solid #333;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
         }
         .header h1 {
             margin: 0;
-            font-size: 20px;
+            font-size: 16px;
             color: #1A365D;
+            letter-spacing: 0.05em;
         }
         .header p {
-            margin: 5px 0 0 0;
-            font-size: 11px;
+            margin: 4px 0 0 0;
+            font-size: 10px;
             color: #666;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
+            margin-top: 10px;
         }
         th, td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 6px 5px;
             text-align: left;
+            vertical-align: top;
         }
         th {
             background-color: #f2f2f2;
             color: #1A365D;
             font-weight: bold;
+            text-transform: uppercase;
+            font-size: 8px;
         }
         tr:nth-child(even) {
             background-color: #fafafa;
         }
         .badge {
-            padding: 3px 6px;
-            border-radius: 3px;
+            padding: 2px 4px;
+            border-radius: 2px;
             font-weight: bold;
-            font-size: 9px;
+            font-size: 8px;
             text-transform: uppercase;
+            display: inline-block;
         }
         .badge-healthy { background-color: #DEF7EC; color: #03543F; }
         .badge-warning { background-color: #FDF6B2; color: #723B10; }
         .badge-critical { background-color: #FDE8E8; color: #9B1C1C; }
         .footer {
-            margin-top: 30px;
+            margin-top: 25px;
             text-align: center;
-            font-size: 9px;
+            font-size: 8px;
             color: #777;
             border-top: 1px solid #ddd;
-            padding-top: 10px;
+            padding-top: 8px;
         }
         @media print {
             .no-print {
@@ -74,28 +79,28 @@
     </style>
 </head>
 <body>
-    <div class="no-print" style="margin-bottom: 20px; text-align: right;">
-        <button onclick="window.print()" style="padding: 8px 16px; background-color: #1A365D; color: white; border: none; border-radius: 4px; cursor: pointer;">Print Report</button>
+    <div class="no-print" style="margin-bottom: 15px; text-align: right;">
+        <button onclick="window.print()" style="padding: 6px 12px; background-color: #1A365D; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: bold;">Print Report</button>
     </div>
     
     <div class="header">
         <h1>RPPL TRANSFORMER HEALTH MONITORING SYSTEM</h1>
-        <p>Generated on: {{ datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') }} · Fault History Report</p>
+        <p>Generated on: {{ datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') }} · Active Fault History Audit Report</p>
     </div>
 
     <table>
         <thead>
             <tr>
-                <th>Transformer ID</th>
-                <th>Location</th>
-                <th>Service Station</th>
+                <th>ID</th>
+                <th>City</th>
+                <th>Service Center (Nearest)</th>
                 <th>Health Status</th>
                 <th>Fault Type</th>
-                <th>Severity</th>
-                <th>Priority</th>
-                <th>Health Score</th>
-                <th>Maintenance Status</th>
-                <th>Timestamp</th>
+                <th>Severity / Priority</th>
+                <th>SLA Compliance</th>
+                <th>Assigned Engineer</th>
+                <th>Resolution Notes</th>
+                <th>Audit Timeline</th>
             </tr>
         </thead>
         <tbody>
@@ -103,22 +108,69 @@
             <tr>
                 <td><strong>{{ r.transformer_id }}</strong></td>
                 <td>{{ r.location }}</td>
-                <td>{{ r.service_station }}</td>
+                <td>
+                    <div>{{ r.service_station }}</div>
+                    {% if r.nearest_service_station %}
+                    <div style="font-size: 7px; color: #666; margin-top: 2px;">
+                        Nearest: {{ r.nearest_service_station }} ({{ r.distance_km }} km)
+                    </div>
+                    {% endif %}
+                </td>
                 <td>
                     <span class="badge {% if r.predicted_health == 'Healthy' %}badge-healthy{% elif r.predicted_health == 'Warning' %}badge-warning{% else %}badge-critical{% endif %}">
-                        {{ r.predicted_health }}
+                        {{ r.predicted_health }} ({{ r.health_score }}%)
                     </span>
                 </td>
                 <td>{{ r.fault_type or 'None' }}</td>
-                <td>{{ r.fault_severity or 'Low' }}</td>
-                <td><strong>{{ r.fault_priority or 'P4' }}</strong></td>
-                <td>{{ r.health_score }}%</td>
-                <td>{{ r.maintenance_status }}</td>
-                <td>{{ r.DeviceTimeStamp }}</td>
+                <td>
+                    <div>Severity: <strong>{{ r.fault_severity or 'Low' }}</strong></div>
+                    <div style="margin-top: 2px;">Priority: <strong>{{ r.fault_priority or 'P4' }}</strong></div>
+                </td>
+                <td>
+                    {% if r.sla_target_minutes %}
+                        <div>Target: {{ r.sla_target_minutes }}m</div>
+                        {% if r.sla_breached %}
+                            <div style="color: #9B1C1C; font-weight: bold; margin-top: 2px;">[BREACHED]</div>
+                        {% elif r.response_time_minutes is not none %}
+                            <div style="color: #03543F; font-weight: bold; margin-top: 2px;">[COMPLIANT]</div>
+                        {% else %}
+                            <div style="color: #666; margin-top: 2px;">[ACTIVE]</div>
+                        {% endif %}
+                    {% else %}
+                        --
+                    {% endif %}
+                </td>
+                <td>
+                    {% if r.assigned_engineer %}
+                        <strong>{{ r.assigned_engineer }}</strong>
+                        <div style="font-size: 7px; color: #666; margin-top: 2px;">{{ r.engineer_phone }}</div>
+                    {% else %}
+                        <span style="color: #888;">Unassigned</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if r.resolution_notes %}
+                        <div>{{ r.resolution_notes }}</div>
+                        <div style="font-size: 7px; color: #666; margin-top: 2px;">By: {{ r.resolved_by }}</div>
+                    {% else %}
+                        --
+                    {% endif %}
+                </td>
+                <td>
+                    {% if r.status_history %}
+                        <div style="font-size: 7px; color: #555; line-height: 1.2;">
+                            {% for h in r.status_history %}
+                                • {{ h.status }} ({{ h.timestamp.split('T')[0] if 'T' in h.timestamp else h.timestamp }} by {{ h.updated_by }})<br>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        --
+                    {% endif %}
+                </td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="10" style="text-align: center;">No history records available.</td>
+                <td colspan="10" style="text-align: center;">No history records available matching the filter.</td>
             </tr>
             {% endfor %}
         </tbody>

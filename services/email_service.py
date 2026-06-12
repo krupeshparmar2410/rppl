@@ -30,9 +30,10 @@ SMTP_PASSWORD = os.environ.get("MAIL_PASSWORD") or os.environ.get("SMTP_PASSWORD
 SMTP_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER") or os.environ.get("SMTP_DEFAULT_SENDER") or "alerts@rpplmonitoring.com"
 ALERT_RECIPIENT_EMAIL = os.environ.get("MAIL_RECIPIENT") or os.environ.get("ALERT_RECIPIENT_EMAIL") or ""
 
-def send_fault_alert_email(transformer_id, location, service_station, latitude, longitude, 
+def send_fault_alert_email(transformer_id, city, service_station, latitude, longitude, 
                            predicted_health, fault_type, fault_severity, fault_priority, 
-                           health_score, maintenance_status, device_timestamp):
+                           health_score, maintenance_status, device_timestamp,
+                           nearest_service_station=None, distance_km=None):
     """
     Sends an SMTP email alert for a Critical transformer status, enforcing a 30-minute 
     cooldown per transformer ID to prevent duplicate messages.
@@ -51,25 +52,23 @@ def send_fault_alert_email(transformer_id, location, service_station, latitude, 
     # ── Prepare Email Body ───────────────────────────────────────────────────
     maps_link = f"https://maps.google.com/?q={latitude},{longitude}"
     
-    subject = "⚠ Critical Transformer Fault Alert"
+    subject = f"⚠ Transformer Fault Alert - {transformer_id}"
     
     body = f"""Transformer Fault Detected
 
 Transformer ID: {transformer_id}
-Location: {location}
+City: {city}
 Service Station: {service_station}
 Health Score: {health_score}%
-Health Status: {predicted_health}
+Predicted Health: {predicted_health}
 Fault Type: {fault_type}
 Fault Severity: {fault_severity}
 Fault Priority: {fault_priority}
 Maintenance Status: {maintenance_status}
-Timestamp: {device_timestamp}
-Latitude: {latitude}
-Longitude: {longitude}
-
-Google Maps Link:
-{maps_link}
+Detection Time: {device_timestamp}
+Google Maps Link: {maps_link}
+Nearest Service Station: {nearest_service_station or service_station}
+Distance From Fault Location: {f'{distance_km} km' if distance_km is not None else 'N/A'}
 
 Immediate inspection required.
 """
@@ -102,4 +101,52 @@ Immediate inspection required.
     except Exception as e:
         logger.error(f"Failed to send email alert for {transformer_id}: {e}")
         # Return False to indicate failure
+        return False
+
+def send_engineer_assignment_email(transformer_id, fault_type, fault_priority, 
+                                   assigned_engineer, engineer_email, 
+                                   engineer_phone, assignment_timestamp):
+    """
+    Sends an SMTP email notification to the assigned engineer when a ticket is assigned.
+    """
+    subject = f"🛠 Transformer Maintenance Assignment - {transformer_id}"
+    
+    body = f"""Transformer Maintenance Work Assignment
+
+Transformer ID: {transformer_id}
+Fault Type: {fault_type or 'General Degradation'}
+Priority: {fault_priority}
+Assigned Engineer Name: {assigned_engineer}
+Engineer Contact Details: {engineer_phone}
+Assignment Timestamp: {assignment_timestamp}
+
+Please proceed to inspect the transformer and resolve the fault.
+"""
+
+    # ── Dev Fallback Check ────────────────────────────────────────────────────
+    if not SMTP_USER or not SMTP_PASSWORD or not engineer_email:
+        logger.warning("SMTP credentials not fully configured. Simulating engineer assignment email notification:")
+        logger.warning(f"\n{'='*70}\n[ASSIGNMENT SIMULATION] ENGINEER EMAIL NOTIFICATION TRIGGERED\n{'='*70}\nSubject: {subject}\nTo     : {engineer_email or '[NOT CONFIGURED]'}\n{'-'*70}\n{body}{'='*70}\n")
+        return True
+
+    # ── Send Real Email ──────────────────────────────────────────────────────
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_DEFAULT_SENDER
+        msg['To'] = engineer_email
+        msg['Subject'] = subject
+        
+        msg.attach(MIMEText(body, 'plain'))
+        
+        # Connect to SMTP server
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASSWORD)
+        server.sendmail(SMTP_DEFAULT_SENDER, [engineer_email], msg.as_string())
+        server.quit()
+        
+        logger.info(f"Assignment email dispatched successfully for {transformer_id} to engineer {engineer_email}.")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send assignment email alert for {transformer_id}: {e}")
         return False
