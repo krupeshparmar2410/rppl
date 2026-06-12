@@ -35,7 +35,7 @@ def compute_health_score(ml_risk_prob, thermal_stress, load_level, oti, pf_drop,
     """
     ml_risk_pct = ml_risk_prob * 100
     ts_pct = min(100, max(0, thermal_stress * 50)) 
-    load_pct = min(100, max(0, load_level))
+    load_pct = min(100, max(0, load_level * 100)) # convert fraction to percentage
     oti_pct = min(100, max(0, (oti - 40) / 80 * 100))
     pf_pct = min(100, max(0, pf_drop * 500))
     pl_pct = min(100, max(0, power_loss * 1000))
@@ -49,6 +49,73 @@ def compute_health_score(ml_risk_prob, thermal_stress, load_level, oti, pf_drop,
                
     score = 100 - penalty
     return max(0, min(100, round(score, 1)))
+
+def get_fault_type(status_code, row_dict):
+    """
+    Identifies the rule-based fault type based on physical parameters.
+    Returns None for Healthy (0), and a specific fault label for Warning (1) / Critical (2).
+    """
+    if status_code == 0:
+        return None
+        
+    oti = row_dict.get('OTI') or row_dict.get('temperature') or 45.0
+    v_imbal = row_dict.get('V_imbalance') or 0.0
+    i_imbal = row_dict.get('I_imbalance') or 0.0
+    pf = row_dict.get('Avg_PF') or 0.98
+    il1 = row_dict.get('IL1') or 0.0
+    il2 = row_dict.get('IL2') or 0.0
+    il3 = row_dict.get('IL3') or 0.0
+
+    # Critical thresholds
+    if status_code == 2:
+        if oti > 80:
+            return "Overtemperature Critical"
+        if v_imbal > 5:
+            return "Severe Voltage Imbalance"
+        if i_imbal > 20:
+            return "Severe Current Imbalance"
+        if il1 > 200 or il2 > 200 or il3 > 200:
+            return "Phase Overcurrent Critical"
+        if pf < 0.80:
+            return "Extremely Low Power Factor"
+            
+    # Warning thresholds
+    if oti > 55:
+        return "High Temperature"
+    if v_imbal > 2:
+        return "Voltage Imbalance"
+    if i_imbal > 10:
+        return "Current Imbalance"
+    if il1 > 150 or il2 > 150 or il3 > 150:
+        return "Phase Overcurrent"
+    if pf < 0.90:
+        return "Low Power Factor"
+
+    return "General Degradation"
+
+def get_fault_severity(status_code, health_score):
+    """Maps prediction status and health score to Fault Severity."""
+    if status_code == 0:
+        return "Low"
+    elif status_code == 1:
+        if health_score >= 70:
+            return "Medium"
+        else:
+            return "High"
+    else:
+        return "Critical"
+
+def get_fault_priority(status_code, health_score):
+    """Maps prediction status and health score to Fault Priority."""
+    if status_code == 2:
+        if health_score < 30:
+            return "P1" # Emergency
+        else:
+            return "P2" # High
+    elif status_code == 1:
+        return "P3"     # Medium
+    else:
+        return "P4"     # Low
 
 def run_prediction(model, feature_list, df):
     df_model = df[feature_list].copy()

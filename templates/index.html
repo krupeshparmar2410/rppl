@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Transformer Health Monitoring | Smart Intelligence Platform</title>
+  <title>AI Transformer Health Monitoring | RPPL Platform</title>
   <meta name="description" content="AI-powered predictive maintenance and industrial monitoring system for transformer health analysis." />
 
   <!-- Fonts -->
@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
 
   <style>
-    /* Inline critical styles */
+    /* Inline styles */
     .hero-visual-float { animation: hero-float 6s ease-in-out infinite; }
     @keyframes hero-float {
       0%, 100% { transform: translateY(0px); }
@@ -44,6 +44,23 @@
       to { transform: translateX(-50%); }
     }
     .svg-waves { width: 100%; }
+    
+    /* Extra grid styling for new metrics */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+    .status-select-wrapper select {
+      background: rgba(11,16,32,0.9);
+      border: 1px solid rgba(59,130,246,0.3);
+      color: #fff;
+      border-radius: 6px;
+      padding: 0.5rem;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.75rem;
+    }
   </style>
 </head>
 <body>
@@ -59,13 +76,13 @@
   <div class="ticker-inner">
     &nbsp;&nbsp;&nbsp;
     ⚡ SYSTEM ONLINE &nbsp;│&nbsp; VL1: 242.1V &nbsp;│&nbsp; VL2: 241.5V &nbsp;│&nbsp; VL3: 243.0V &nbsp;│&nbsp;
-    IL1: 95.3A &nbsp;│&nbsp; OTI: 46.2°C &nbsp;│&nbsp; OLI: 37.0% &nbsp;│&nbsp;
+    IL1: 95.3A &nbsp;│&nbsp; OTI: -- &nbsp;│&nbsp; OLI: -- &nbsp;│&nbsp;
     AVG_PF: 0.98 &nbsp;│&nbsp; KW: 55.4 &nbsp;│&nbsp; FREQ: 50.0Hz &nbsp;│&nbsp;
     V_IMBALANCE: 0.31% &nbsp;│&nbsp; HEALTH: 87.4% &nbsp;│&nbsp; STATUS: NORMAL &nbsp;│&nbsp;
-    THERMAL_STRESS: 0.18 &nbsp;│&nbsp; LOAD_LEVEL: 39.2% &nbsp;│&nbsp; KWH: 1200.4 &nbsp;│&nbsp;
-    MODEL: XGBoost v1.0 &nbsp;│&nbsp; ACCURACY: 97.3% &nbsp;│&nbsp;
+    THERMAL_STRESS: -- &nbsp;│&nbsp; LOAD_LEVEL: 39.2% &nbsp;│&nbsp; KWH: 1200.4 &nbsp;│&nbsp;
+    MODEL: RandomForest v1.0 &nbsp;│&nbsp; MONGO ATLAS: CONNECTED &nbsp;│&nbsp;
     ⚡ SYSTEM ONLINE &nbsp;│&nbsp; VL1: 242.1V &nbsp;│&nbsp; VL2: 241.5V &nbsp;│&nbsp; VL3: 243.0V &nbsp;│&nbsp;
-    IL1: 95.3A &nbsp;│&nbsp; OTI: 46.2°C &nbsp;│&nbsp; OLI: 37.0% &nbsp;│&nbsp;
+    IL1: 95.3A &nbsp;│&nbsp; OTI: -- &nbsp;│&nbsp; OLI: -- &nbsp;│&nbsp;
     AVG_PF: 0.98 &nbsp;│&nbsp; KW: 55.4 &nbsp;│&nbsp; FREQ: 50.0Hz &nbsp;│&nbsp;
     V_IMBALANCE: 0.31% &nbsp;│&nbsp; HEALTH: 87.4% &nbsp;│&nbsp; STATUS: NORMAL &nbsp;│&nbsp;
   </div>
@@ -86,6 +103,7 @@
     <li><a href="#dashboard">Dashboard</a></li>
     <li><a href="#analytics">Analytics</a></li>
     <li><a href="#predictions">Predictions</a></li>
+    <li><a href="/fault-history">Fault History</a></li>
     <li><a href="#about">About</a></li>
   </ul>
 
@@ -112,29 +130,29 @@
     <div class="hero-content">
       <div class="hero-badge">
         <div class="hero-badge-dot"></div>
-        AI-POWERED · REAL-TIME · PREDICTIVE
+        AI-POWERED · MONGO ATLAS NORMALIZED · PREDICTIVE
       </div>
 
       <h1 class="hero-title">
         Smart Transformer
-        <span class="gradient-text">Intelligence Platform</span>
+        <span class="gradient-text">Monitoring Platform</span>
       </h1>
 
       <p class="hero-subtitle">
-        AI-powered predictive maintenance and industrial monitoring system for transformer health analysis.
-        Detect faults before they happen with
-        <span style="color:var(--cyan);font-weight:600;">Machine Learning</span> and
-        <span style="color:var(--blue);font-weight:600;">Real-time Sensors</span>.
+        Enterprise-grade predictive maintenance and monitoring platform. 
+        Detect electrical anomalies, classify fault severity, and track maintenance tickets with
+        <span style="color:var(--cyan);font-weight:600;">MongoDB Atlas</span> and
+        <span style="color:var(--blue);font-weight:600;">Machine Learning</span>.
       </p>
 
       <div class="hero-buttons">
         <a href="#predictions" class="btn-primary">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-          Upload Dataset
+          Upload CSV Dataset
         </a>
-        <a href="#analytics" class="btn-secondary">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-          View Analytics
+        <a href="/fault-history" class="btn-secondary">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          Fault History Logs
         </a>
       </div>
 
@@ -146,12 +164,12 @@
         <div style="width:1px;background:rgba(59,130,246,0.15);"></div>
         <div>
           <div class="hero-stat-num" data-counter="19000" data-decimals="0">0</div>
-          <div class="hero-stat-label">Sensor Readings</div>
+          <div class="hero-stat-label">Training Readings</div>
         </div>
         <div style="width:1px;background:rgba(59,130,246,0.15);"></div>
         <div>
-          <div class="hero-stat-num" data-counter="3" data-decimals="0">0</div>
-          <div class="hero-stat-label">Health States</div>
+          <div class="hero-stat-num" data-counter="4" data-decimals="0">0</div>
+          <div class="hero-stat-label">Gujarat Centers</div>
         </div>
       </div>
     </div>
@@ -159,8 +177,8 @@
     <!-- Right Column: Visual -->
     <div class="hero-visual hero-visual-float">
       <div class="hero-transformer-card">
-        <!-- Top scanner line is CSS ::before -->
-
+        <!-- Top scanner line -->
+        
         <!-- Transformer Diagram -->
         <div class="transformer-visual">
           <div class="transformer-svg-wrap">
@@ -177,8 +195,8 @@
             <div style="margin-top:4px;">L3 ────── 243.0V</div>
           </div>
           <div style="position:absolute;top:10px;right:0;font-family:'Share Tech Mono',monospace;font-size:0.65rem;color:var(--cyan);text-align:right;">
-            <div>OTI: 46.2°C</div>
-            <div style="margin-top:4px;">PF: 0.98</div>
+            <div>Avg_PF: 0.98</div>
+            <div style="margin-top:4px;">assumed_pf: 0.98</div>
             <div style="margin-top:4px;">KW: 55.4</div>
           </div>
 
@@ -197,8 +215,8 @@
         <!-- Mini Metrics -->
         <div class="hero-mini-metrics">
           <div class="mini-metric">
-            <div class="mini-metric-val" id="hero-temp">46.2°</div>
-            <div class="mini-metric-lbl">Oil Temp</div>
+            <div class="mini-metric-val" id="hero-temp">45.0°</div>
+            <div class="mini-metric-lbl">Est. Temp</div>
           </div>
           <div class="mini-metric">
             <div class="mini-metric-val" style="color:var(--emerald);">NORM</div>
@@ -214,9 +232,9 @@
         <div style="margin-top:1rem;padding:0.75rem;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.12);border-radius:10px;display:flex;align-items:center;gap:10px;">
           <div style="width:8px;height:8px;border-radius:50%;background:var(--emerald);box-shadow:0 0 8px var(--emerald);animation:blink 2s infinite;flex-shrink:0;"></div>
           <div style="font-family:'Share Tech Mono',monospace;font-size:0.7rem;color:var(--text-secondary);">
-            AI MODEL: <span style="color:var(--cyan);">XGBoost</span> ·
-            FEATURES: <span style="color:var(--blue);">32</span> ·
-            PREDICTION: <span style="color:var(--emerald);">NORMAL</span>
+            DATABASE: <span style="color:var(--cyan);">Mongo Atlas</span> ·
+            PRIORITIES: <span style="color:var(--blue);">P1-P4 Severity</span> ·
+            PF: <span style="color:var(--emerald);">0.98 Transp.</span>
           </div>
         </div>
       </div>
@@ -242,21 +260,101 @@
   <div class="container">
 
     <div class="section-header" data-reveal>
-      <div class="section-tag">// LIVE TELEMETRY</div>
-      <h2 class="section-title">Real-Time <span>Monitoring Dashboard</span></h2>
-      <p class="section-desc">Live sensor data from transformer monitoring system with AI-driven health analysis.</p>
+      <div class="section-tag">// LIVE MONITORING</div>
+      <h2 class="section-title">System <span>KPI Dashboard</span></h2>
+      <p class="section-desc">Real-time status updates and operation metrics derived directly from MongoDB Atlas logs.</p>
     </div>
 
-    <!-- Metrics Grid -->
+    <!-- Admin KPI Cards Grid -->
+    <div class="metrics-row" data-reveal>
+      
+      <!-- Total processed -->
+      <div class="glass-card">
+        <div class="card-label">Total Processed</div>
+        <div class="card-value blue" id="stat-total-processed">0</div>
+        <div style="font-family:'Share Tech Mono',monospace; font-size:0.65rem; color:var(--text-secondary);">Total telemetries registered</div>
+      </div>
+
+      <!-- Average health score -->
+      <div class="glass-card">
+        <div class="card-label">Average Health Score</div>
+        <div class="card-value green" id="stat-avg-health">0%</div>
+        <div style="font-family:'Share Tech Mono',monospace; font-size:0.65rem; color:var(--text-secondary);">Fleet health average</div>
+      </div>
+
+      <!-- Active critical faults -->
+      <div class="glass-card">
+        <div class="card-label">Active Critical Faults</div>
+        <div class="card-value red" id="stat-active-critical">0</div>
+        <div style="font-family:'Share Tech Mono',monospace; font-size:0.65rem; color:var(--text-secondary);">Critical logs unresolved</div>
+      </div>
+
+      <!-- Requiring maintenance -->
+      <div class="glass-card">
+        <div class="card-label">Requiring Maintenance</div>
+        <div class="card-value orange" id="stat-req-maintenance">0</div>
+        <div style="font-family:'Share Tech Mono',monospace; font-size:0.65rem; color:var(--text-secondary);">Transformers needing attention</div>
+      </div>
+
+      <!-- Emails sent -->
+      <div class="glass-card">
+        <div class="card-label">Alert Emails Sent</div>
+        <div class="card-value purple" id="stat-emails-sent">0</div>
+        <div style="font-family:'Share Tech Mono',monospace; font-size:0.65rem; color:var(--text-secondary);">Dispatched notifications</div>
+      </div>
+      
+    </div>
+
+    <!-- Fault Priority Metrics -->
+    <div class="metrics-row" data-reveal>
+      
+      <!-- P1 Emergency Faults -->
+      <div class="glass-card red" style="border-left: 3px solid #EF4444;">
+        <div class="card-label">P1 Emergency Faults</div>
+        <div class="card-value red" id="stat-p1-emergency">0</div>
+        <div style="font-family:'Share Tech Mono',monospace; font-size:0.65rem; color:var(--text-secondary);">Immediate inspection needed</div>
+      </div>
+
+      <!-- P2 High Priority Faults -->
+      <div class="glass-card orange" style="border-left: 3px solid #F59E0B;">
+        <div class="card-label">P2 High Priority Faults</div>
+        <div class="card-value orange" id="stat-p2-high">0</div>
+        <div style="font-family:'Share Tech Mono',monospace; font-size:0.65rem; color:var(--text-secondary);">High priority tickets</div>
+      </div>
+
+      <!-- Pending Repairs -->
+      <div class="glass-card">
+        <div class="card-label">Pending Repairs</div>
+        <div class="card-value blue" id="stat-pending-repairs">0</div>
+        <div style="font-family:'Share Tech Mono',monospace; font-size:0.65rem; color:var(--text-secondary);">Awaiting action</div>
+      </div>
+
+      <!-- Average Response Time -->
+      <div class="glass-card">
+        <div class="card-label">Avg Response Time</div>
+        <div class="card-value cyan" id="stat-avg-response">0m</div>
+        <div style="font-family:'Share Tech Mono',monospace; font-size:0.65rem; color:var(--text-secondary);">Detection to Acknowledged</div>
+      </div>
+
+      <!-- Average Repair Time -->
+      <div class="glass-card">
+        <div class="card-label">Avg Repair Time</div>
+        <div class="card-value purple" id="stat-avg-repair">0m</div>
+        <div style="font-family:'Share Tech Mono',monospace; font-size:0.65rem; color:var(--text-secondary);">Detection to Resolved</div>
+      </div>
+
+    </div>
+
+    <!-- Live Telemetry Row -->
     <div class="dashboard-grid">
 
-      <!-- Health Score -->
+      <!-- Health Score Circular -->
       <div class="glass-card" data-reveal data-delay="100">
         <div class="card-header">
           <div class="card-icon blue">🫀</div>
           <div class="card-pulse green"></div>
         </div>
-        <div class="card-label">Transformer Health Score</div>
+        <div class="card-label">Real-time Health Score</div>
         <div id="health-progress" class="circular-progress" style="margin:0.75rem 0;">
           <svg viewBox="0 0 80 80">
             <circle class="circular-progress-bg" cx="40" cy="40" r="34"/>
@@ -274,10 +372,10 @@
             <span id="live-health">87.4</span>%
           </div>
         </div>
-        <div class="card-trend trend-up">▲ 2.1% from last hour</div>
+        <div class="card-trend trend-up">▲ Stream Active</div>
       </div>
 
-      <!-- Status -->
+      <!-- Operational Status -->
       <div class="glass-card green" data-reveal data-delay="150">
         <div class="card-header">
           <div class="card-icon green">📡</div>
@@ -293,28 +391,9 @@
           Last updated: <span style="color:var(--cyan);" id="last-updated">Just now</span>
         </div>
         <div class="progress-bar-wrap" style="margin-top:1.5rem;">
-          <div class="progress-bar-label"><span>System Reliability</span><span style="color:var(--emerald);">94.7%</span></div>
+          <div class="progress-bar-label"><span>System Reliability</span><span style="color:var(--emerald);">97.3%</span></div>
           <div class="progress-bar-track">
-            <div class="progress-bar-fill" style="width:94.7%;background:linear-gradient(90deg,var(--emerald),#34D399);"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Temperature -->
-      <div class="glass-card orange" data-reveal data-delay="200">
-        <div class="card-header">
-          <div class="card-icon orange">🌡️</div>
-          <div class="card-pulse orange"></div>
-        </div>
-        <div class="card-label">Oil Temperature Index (OTI)</div>
-        <div class="card-value orange">
-          <span id="live-temp">46.2</span><span class="card-unit">°C</span>
-        </div>
-        <div class="card-trend trend-neutral" style="margin-bottom:0.75rem;">— Stable · Warning at 55°C</div>
-        <div class="progress-bar-wrap">
-          <div class="progress-bar-label"><span>35°C</span><span>100°C</span></div>
-          <div class="progress-bar-track">
-            <div class="progress-bar-fill" id="temp-bar" style="width:28%;background:linear-gradient(90deg,var(--blue),var(--orange));"></div>
+            <div class="progress-bar-fill" style="width:97.3%;background:linear-gradient(90deg,var(--emerald),#34D399);"></div>
           </div>
         </div>
       </div>
@@ -334,12 +413,6 @@
           <span style="font-family:'Share Tech Mono',monospace;font-size:0.65rem;padding:2px 8px;background:rgba(59,130,246,0.08);border-radius:4px;color:var(--cyan);">L2: 241.5V</span>
           <span style="font-family:'Share Tech Mono',monospace;font-size:0.65rem;padding:2px 8px;background:rgba(59,130,246,0.08);border-radius:4px;color:var(--emerald);">L3: 243.0V</span>
         </div>
-        <div class="progress-bar-wrap">
-          <div class="progress-bar-label"><span>220V</span><span>270V</span></div>
-          <div class="progress-bar-track">
-            <div class="progress-bar-fill" id="voltage-bar" style="width:44%;background:linear-gradient(90deg,var(--cyan),var(--blue));"></div>
-          </div>
-        </div>
       </div>
 
       <!-- Power Consumption -->
@@ -353,110 +426,12 @@
           <span id="live-power">55.4</span><span class="card-unit">kW</span>
         </div>
         <div style="display:flex;gap:0.5rem;margin:0.5rem 0;font-family:'Share Tech Mono',monospace;font-size:0.65rem;color:var(--text-secondary);">
-          <span>KVA: <span style="color:var(--blue);">57.2</span></span>
+          <span>assumed_pf: <span style="color:var(--emerald);">0.98</span></span>
           <span>·</span>
-          <span>KVAR: <span style="color:var(--purple);">12.0</span></span>
-          <span>·</span>
-          <span>PF: <span style="color:var(--emerald);">0.98</span></span>
-        </div>
-        <div class="progress-bar-wrap">
-          <div class="progress-bar-label"><span>Load Level</span><span style="color:var(--blue);">39.2%</span></div>
-          <div class="progress-bar-track">
-            <div class="progress-bar-fill" id="power-bar" style="width:39.2%;background:linear-gradient(90deg,var(--blue),var(--purple));"></div>
-          </div>
+          <span>KVA: <span style="color:var(--blue);">56.5</span></span>
         </div>
       </div>
 
-      <!-- Failure Probability -->
-      <div class="glass-card" data-reveal data-delay="350">
-        <div class="card-header">
-          <div class="card-icon red">🎯</div>
-          <div class="card-pulse green"></div>
-        </div>
-        <div class="card-label">Failure Probability</div>
-        <div id="failure-progress" class="circular-progress" style="margin:0.75rem 0;">
-          <svg viewBox="0 0 80 80">
-            <circle class="circular-progress-bg" cx="40" cy="40" r="34"/>
-            <circle class="circular-progress-fill" cx="40" cy="40" r="34"
-                    stroke="#EF4444"
-                    style="stroke-dasharray:213.6;stroke-dashoffset:196;"/>
-          </svg>
-          <div class="circular-progress-text" style="color:var(--emerald);">
-            <span id="live-failure">8.3</span>%
-          </div>
-        </div>
-        <div style="font-family:'Share Tech Mono',monospace;font-size:0.68rem;color:var(--text-secondary);">
-          ISOLATION FOREST · ANOMALY SCORE
-        </div>
-      </div>
-
-    </div><!-- /.dashboard-grid -->
-
-    <!-- Sensor Data Table -->
-    <div class="glass-card" style="margin-top:1.5rem;" data-reveal>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-        <div style="font-family:'Orbitron',monospace;font-size:0.8rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;">
-          Live Sensor Readings
-        </div>
-        <div style="display:flex;gap:0.5rem;align-items:center;">
-          <div class="status-dot" style="width:6px;height:6px;"></div>
-          <span style="font-family:'Share Tech Mono',monospace;font-size:0.65rem;color:var(--cyan);">STREAMING</span>
-        </div>
-      </div>
-      <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-family:'Share Tech Mono',monospace;font-size:0.75rem;">
-          <thead>
-            <tr style="border-bottom:1px solid rgba(59,130,246,0.15);">
-              <th style="padding:0.6rem 1rem;text-align:left;color:var(--text-secondary);font-weight:500;letter-spacing:0.08em;">PARAMETER</th>
-              <th style="padding:0.6rem 1rem;text-align:center;color:var(--text-secondary);">L1</th>
-              <th style="padding:0.6rem 1rem;text-align:center;color:var(--text-secondary);">L2</th>
-              <th style="padding:0.6rem 1rem;text-align:center;color:var(--text-secondary);">L3</th>
-              <th style="padding:0.6rem 1rem;text-align:center;color:var(--text-secondary);">UNIT</th>
-              <th style="padding:0.6rem 1rem;text-align:center;color:var(--text-secondary);">STATUS</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="border-bottom:1px solid rgba(59,130,246,0.06);">
-              <td style="padding:0.7rem 1rem;color:var(--text-secondary);">Voltage (VL)</td>
-              <td style="padding:0.7rem 1rem;text-align:center;color:var(--blue);">242.1</td>
-              <td style="padding:0.7rem 1rem;text-align:center;color:var(--cyan);">241.5</td>
-              <td style="padding:0.7rem 1rem;text-align:center;color:var(--emerald);">243.0</td>
-              <td style="padding:0.7rem 1rem;text-align:center;color:var(--text-secondary);">V</td>
-              <td style="padding:0.7rem 1rem;text-align:center;"><span class="status-badge normal" style="font-size:0.6rem;padding:0.2rem 0.6rem;">NORMAL</span></td>
-            </tr>
-            <tr style="border-bottom:1px solid rgba(59,130,246,0.06);">
-              <td style="padding:0.7rem 1rem;color:var(--text-secondary);">Current (IL)</td>
-              <td style="padding:0.7rem 1rem;text-align:center;color:var(--blue);">95.0</td>
-              <td style="padding:0.7rem 1rem;text-align:center;color:var(--cyan);">97.0</td>
-              <td style="padding:0.7rem 1rem;text-align:center;color:var(--emerald);">94.0</td>
-              <td style="padding:0.7rem 1rem;text-align:center;color:var(--text-secondary);">A</td>
-              <td style="padding:0.7rem 1rem;text-align:center;"><span class="status-badge normal" style="font-size:0.6rem;padding:0.2rem 0.6rem;">NORMAL</span></td>
-            </tr>
-            <tr style="border-bottom:1px solid rgba(59,130,246,0.06);">
-              <td style="padding:0.7rem 1rem;color:var(--text-secondary);">THD Voltage</td>
-              <td style="padding:0.7rem 1rem;text-align:center;color:var(--blue);">1.2</td>
-              <td style="padding:0.7rem 1rem;text-align:center;color:var(--cyan);">1.1</td>
-              <td style="padding:0.7rem 1rem;text-align:center;color:var(--emerald);">1.3</td>
-              <td style="padding:0.7rem 1rem;text-align:center;color:var(--text-secondary);">%</td>
-              <td style="padding:0.7rem 1rem;text-align:center;"><span class="status-badge normal" style="font-size:0.6rem;padding:0.2rem 0.6rem;">NORMAL</span></td>
-            </tr>
-            <tr style="border-bottom:1px solid rgba(59,130,246,0.06);">
-              <td style="padding:0.7rem 1rem;color:var(--text-secondary);">THD Current</td>
-              <td style="padding:0.7rem 1rem;text-align:center;color:var(--blue);">3.5</td>
-              <td style="padding:0.7rem 1rem;text-align:center;color:var(--cyan);">3.2</td>
-              <td style="padding:0.7rem 1rem;text-align:center;color:var(--emerald);">3.8</td>
-              <td style="padding:0.7rem 1rem;text-align:center;color:var(--text-secondary);">%</td>
-              <td style="padding:0.7rem 1rem;text-align:center;"><span class="status-badge normal" style="font-size:0.6rem;padding:0.2rem 0.6rem;">NORMAL</span></td>
-            </tr>
-            <tr>
-              <td style="padding:0.7rem 1rem;color:var(--text-secondary);">V Imbalance</td>
-              <td style="padding:0.7rem 1rem;text-align:center;color:var(--orange);" colspan="3">0.31%</td>
-              <td style="padding:0.7rem 1rem;text-align:center;color:var(--text-secondary);">%</td>
-              <td style="padding:0.7rem 1rem;text-align:center;"><span class="status-badge normal" style="font-size:0.6rem;padding:0.2rem 0.6rem;">NORMAL</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
     </div>
 
   </div>
@@ -469,77 +444,100 @@
   <div class="container">
 
     <div class="section-header" data-reveal>
-      <div class="section-tag">// TREND ANALYSIS</div>
-      <h2 class="section-title">Data <span>Visualization</span></h2>
-      <p class="section-desc">Historical sensor trends and anomaly patterns for comprehensive transformer analysis.</p>
+      <div class="section-tag">// DATA VISUALIZATION</div>
+      <h2 class="section-title">Gujarat <span>Location Analytics</span></h2>
+      <p class="section-desc">Historical fault trends and priority distributions mapped across cities and service centers.</p>
     </div>
 
-    <div class="charts-grid">
+    <!-- Location Charts Row -->
+    <div class="charts-grid" style="margin-bottom: 2rem;">
 
-      <!-- Voltage Trend -->
+      <!-- Fault Count by City -->
       <div class="chart-card" data-reveal data-delay="100">
         <div class="chart-card-header">
-          <div class="chart-card-title">Three-Phase Voltage Trend</div>
-          <span class="chart-card-badge">LIVE · 5min</span>
+          <div class="chart-card-title">Fault Count by City</div>
+          <span class="chart-card-badge">GEOGRAPHIC</span>
         </div>
         <div class="chart-wrap">
-          <canvas id="voltageChart"></canvas>
-        </div>
-        <div style="display:flex;gap:1rem;margin-top:0.75rem;font-family:'Share Tech Mono',monospace;font-size:0.65rem;">
-          <span style="color:var(--blue);">● L1: 242.1V</span>
-          <span style="color:var(--cyan);">● L2: 241.5V</span>
-          <span style="color:var(--emerald);">● L3: 243.0V</span>
+          <canvas id="cityFaultChart"></canvas>
         </div>
       </div>
 
-      <!-- Temperature -->
+      <!-- Fault Count by Service Station -->
       <div class="chart-card" data-reveal data-delay="200">
         <div class="chart-card-header">
-          <div class="chart-card-title">Oil Temperature Index (OTI)</div>
-          <span class="chart-card-badge" style="background:rgba(245,158,11,0.1);color:var(--orange);border-color:rgba(245,158,11,0.2);">THERMAL</span>
+          <div class="chart-card-title">Fault Count by Service Center</div>
+          <span class="chart-card-badge">OPERATIONAL</span>
         </div>
         <div class="chart-wrap">
-          <canvas id="tempChart"></canvas>
-        </div>
-        <div style="display:flex;gap:1.5rem;margin-top:0.75rem;font-family:'Share Tech Mono',monospace;font-size:0.65rem;color:var(--text-secondary);">
-          <span>Warning threshold: <span style="color:var(--orange);">55°C</span></span>
-          <span>Critical: <span style="color:var(--red);">80°C</span></span>
+          <canvas id="stationFaultChart"></canvas>
         </div>
       </div>
 
-      <!-- Current Imbalance -->
+      <!-- Priority Distribution -->
       <div class="chart-card" data-reveal data-delay="300">
         <div class="chart-card-header">
-          <div class="chart-card-title">Voltage Imbalance Distribution</div>
-          <span class="chart-card-badge" style="background:rgba(139,92,246,0.1);color:var(--purple);border-color:rgba(139,92,246,0.2);">QUALITY</span>
+          <div class="chart-card-title">Fault Priority Distribution</div>
+          <span class="chart-card-badge">URGENCY</span>
         </div>
         <div class="chart-wrap">
-          <canvas id="imbalanceChart"></canvas>
-        </div>
-        <div style="display:flex;gap:1.5rem;margin-top:0.75rem;font-family:'Share Tech Mono',monospace;font-size:0.65rem;">
-          <span style="color:var(--blue);">● Normal &lt;2%</span>
-          <span style="color:var(--orange);">● Warning &lt;5%</span>
-          <span style="color:var(--red);">● Critical &gt;5%</span>
+          <canvas id="priorityChart"></canvas>
         </div>
       </div>
 
-      <!-- Health Score -->
-      <div class="chart-card" data-reveal data-delay="400">
+    </div>
+
+    <!-- Trends Row -->
+    <div class="charts-grid" style="margin-bottom: 2rem;">
+
+      <!-- Daily Fault Trend -->
+      <div class="chart-card" data-reveal data-delay="100">
         <div class="chart-card-header">
-          <div class="chart-card-title">Transformer Health Score Over Time</div>
-          <span class="chart-card-badge" style="background:rgba(16,185,129,0.1);color:var(--emerald);border-color:rgba(16,185,129,0.2);">AI SCORE</span>
+          <div class="chart-card-title">Daily Fault Trends</div>
+          <span class="chart-card-badge">DAILY LOGS</span>
         </div>
         <div class="chart-wrap">
-          <canvas id="healthChart"></canvas>
-        </div>
-        <div style="display:flex;gap:1.5rem;margin-top:0.75rem;font-family:'Share Tech Mono',monospace;font-size:0.65rem;color:var(--text-secondary);">
-          <span>Healthy: <span style="color:var(--emerald);">&gt;80%</span></span>
-          <span>Warning: <span style="color:var(--orange);">60-80%</span></span>
-          <span>Critical: <span style="color:var(--red);">&lt;60%</span></span>
+          <canvas id="dailyTrendChart"></canvas>
         </div>
       </div>
 
-    </div><!-- /.charts-grid -->
+      <!-- Monthly Fault Trend -->
+      <div class="chart-card" data-reveal data-delay="200">
+        <div class="chart-card-header">
+          <div class="chart-card-title">Monthly Fault Trends</div>
+          <span class="chart-card-badge">MONTHLY SUMMARY</span>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="monthlyTrendChart"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Transformer-wise Health Timeline -->
+    <div class="glass-card" data-reveal style="margin-top: 2rem;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap; gap:10px;">
+        <div>
+          <div style="font-family:'Orbitron',monospace; font-size:0.8rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase;">
+            Predictive Health Timeline
+          </div>
+          <div style="font-size:0.7rem; color:var(--text-secondary);">Select a transformer to view its historical health trajectory.</div>
+        </div>
+        
+        <div class="status-select-wrapper">
+          <select id="timeline-transformer-select" onchange="updateHealthTimeline(this.value)">
+            <option value="TR001">TR001 (Ahmedabad)</option>
+            <option value="TR002">TR002 (Surat)</option>
+            <option value="TR003">TR003 (Vadodara)</option>
+            <option value="TR004">TR004 (Rajkot)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="height:250px; position:relative;">
+        <canvas id="transformerTimelineChart"></canvas>
+      </div>
+    </div>
 
   </div>
 </section>
@@ -553,13 +551,31 @@
     <div class="section-header" data-reveal>
       <div class="section-tag">// AI INFERENCE ENGINE</div>
       <h2 class="section-title">Predictive <span>Health Analysis</span></h2>
-      <p class="section-desc">Upload your sensor CSV data and get an instant AI-powered transformer health prediction.</p>
+      <p class="section-desc">Select a unique transformer ID and upload sensor CSV data to write predictions to MongoDB Atlas.</p>
     </div>
 
     <div class="prediction-grid" data-reveal>
 
       <!-- Left: Upload -->
       <div>
+        
+        <!-- Transformer ID Dropdown -->
+        <div class="glass-card" style="margin-bottom:1rem; padding:1.25rem;">
+          <label style="font-family:'Orbitron',monospace; font-size:0.7rem; font-weight:600; color:var(--text-primary); margin-bottom:0.5rem; display:block; letter-spacing:0.05em;">
+            TARGET TRANSFORMER ID
+          </label>
+          <select id="transformer-id-select" style="width:100%; padding:0.6rem; font-size:0.75rem; background:rgba(11,16,32,0.9); border:1px solid rgba(59,130,246,0.3); border-radius:6px; color:#fff; font-family:'Share Tech Mono';">
+            {% for t in transformers %}
+              <option value="{{ t.transformer_id }}">{{ t.transformer_id }} · {{ t.location }} ({{ t.service_station }})</option>
+            {% else %}
+              <option value="TR001">TR001 · Ahmedabad (Ahmedabad Service Center)</option>
+              <option value="TR002">TR002 · Surat (Surat Service Center)</option>
+              <option value="TR003">TR003 · Vadodara (Vadodara Service Center)</option>
+              <option value="TR004">TR004 · Rajkot (Rajkot Service Center)</option>
+            {% endfor %}
+          </select>
+        </div>
+
         <!-- Upload Zone -->
         <div class="upload-zone" id="upload-zone">
           <span class="upload-icon">📂</span>
@@ -570,10 +586,10 @@
             Select CSV File
           </button>
           <div class="upload-specs">
-            <span class="upload-spec">CSV format</span>
-            <span class="upload-spec">Sensor readings</span>
-            <span class="upload-spec">32 features</span>
-            <span class="upload-spec">Max 50MB</span>
+            <span class="upload-spec">DeviceTimeStamp</span>
+            <span class="upload-spec">VL1, VL2, VL3</span>
+            <span class="upload-spec">IL1, IL2, IL3</span>
+            <span class="upload-spec">INUT, VL12, VL23, VL31</span>
           </div>
           <input type="file" id="csv-input" accept=".csv" style="display:none;" />
         </div>
@@ -581,22 +597,16 @@
         <!-- Required Features -->
         <div class="glass-card" style="margin-top:1.25rem;">
           <div style="font-family:'Orbitron',monospace;font-size:0.75rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:1rem;color:var(--text-primary);">
-            Required Input Features
+            Ingested Features
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
-            <div style="display:flex;flex-wrap:wrap;gap:0.4rem;grid-column:1/-1;">
+          <div style="display:grid;grid-template-columns:1fr;gap:0.5rem;">
+            <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
+              <span class="tech-pill" style="font-size:0.65rem; background:rgba(59,130,246,0.15); border-color:rgba(59,130,246,0.25);">DeviceTimeStamp</span>
               <span class="tech-pill" style="font-size:0.65rem;">VL1, VL2, VL3</span>
               <span class="tech-pill" style="font-size:0.65rem;">IL1, IL2, IL3</span>
-              <span class="tech-pill" style="font-size:0.65rem;">OTI, OLI</span>
-              <span class="tech-pill" style="font-size:0.65rem;">Avg_PF, FRQ</span>
-              <span class="tech-pill" style="font-size:0.65rem;">THDVL1-3</span>
-              <span class="tech-pill" style="font-size:0.65rem;">THDIL1-3</span>
-              <span class="tech-pill" style="font-size:0.65rem;">KW, KVA, KVAR</span>
-              <span class="tech-pill" style="font-size:0.65rem;">V_imbalance</span>
-              <span class="tech-pill" style="font-size:0.65rem;">I_imbalance</span>
-              <span class="tech-pill" style="font-size:0.65rem;">Thermal_stress</span>
-              <span class="tech-pill" style="font-size:0.65rem;">Load_level</span>
-              <span class="tech-pill" style="font-size:0.65rem;">Hour, DayOfWeek</span>
+              <span class="tech-pill" style="font-size:0.65rem;">VL12, VL23, VL31</span>
+              <span class="tech-pill" style="font-size:0.65rem;">INUT</span>
+              <span class="tech-pill" style="font-size:0.65rem; background:rgba(16,185,129,0.15); border-color:rgba(16,185,129,0.25);">Future IoT: OTI, OLI, THDs</span>
             </div>
           </div>
         </div>
@@ -612,10 +622,10 @@
             AI PREDICTION ENGINE
           </div>
           <div class="prediction-placeholder-text">
-            Upload a CSV file to receive<br/>real-time transformer health classification.
+            Upload a CSV file to save results<br/>and write prediction logs to MongoDB.
           </div>
           <div style="display:flex;gap:0.75rem;flex-wrap:wrap;justify-content:center;font-family:'Share Tech Mono',monospace;font-size:0.65rem;">
-            <span style="padding:0.3rem 0.8rem;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:12px;color:var(--emerald);">● NORMAL</span>
+            <span style="padding:0.3rem 0.8rem;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:12px;color:var(--emerald);">● HEALTHY</span>
             <span style="padding:0.3rem 0.8rem;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:12px;color:var(--orange);">◉ WARNING</span>
             <span style="padding:0.3rem 0.8rem;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:12px;color:var(--red);">◈ CRITICAL</span>
           </div>
@@ -625,7 +635,7 @@
         <div class="prediction-loading" id="pred-loading">
           <div class="spinner"></div>
           <div style="font-family:'Orbitron',monospace;font-size:0.8rem;letter-spacing:0.1em;color:var(--text-secondary);">PROCESSING SENSORS</div>
-          <div class="spinner-text">Running AI inference…</div>
+          <div class="spinner-text">Writing to MongoDB Atlas…</div>
         </div>
 
         <!-- Result -->
@@ -637,7 +647,7 @@
 
           <div class="prediction-status-large" id="pred-status-box">
             <span class="prediction-status-icon" id="pred-status-icon">✅</span>
-            <div class="prediction-status-text" id="pred-status-text">NORMAL</div>
+            <div class="prediction-status-text" id="pred-status-text">HEALTHY</div>
           </div>
 
           <!-- Summary Stats -->
@@ -647,7 +657,7 @@
               <div id="stat-total" style="font-family:'Share Tech Mono';font-size:0.9rem;color:var(--blue);">0</div>
             </div>
             <div style="padding:0.5rem;background:rgba(16,185,129,0.08);border-radius:6px;border:1px solid rgba(16,185,129,0.15);">
-              <div style="font-size:0.6rem;color:var(--text-secondary);">NORMAL</div>
+              <div style="font-size:0.6rem;color:var(--text-secondary);">HEALTHY</div>
               <div id="stat-normal" style="font-family:'Share Tech Mono';font-size:0.9rem;color:var(--emerald);">0</div>
             </div>
             <div style="padding:0.5rem;background:rgba(245,158,11,0.08);border-radius:6px;border:1px solid rgba(245,158,11,0.15);">
@@ -667,7 +677,7 @@
 
           <div class="prediction-probs">
             <div class="prob-row">
-              <span class="prob-label" style="color:var(--emerald);">NORMAL</span>
+              <span class="prob-label" style="color:var(--emerald);">HEALTHY</span>
               <div class="prob-bar"><div class="prob-bar-fill" id="bar-normal" style="width:0%;background:var(--emerald);"></div></div>
               <span class="prob-pct" id="pct-normal" style="color:var(--emerald);">0%</span>
             </div>
@@ -688,14 +698,6 @@
             <div style="font-family:'Orbitron',monospace;font-size:0.65rem;color:var(--cyan);margin-bottom:0.5rem;letter-spacing:0.1em;">MAINTENANCE RECOMMENDATIONS</div>
             <ul id="pred-recommendations" style="margin:0;padding-left:1.2rem;font-size:0.75rem;color:var(--text-secondary);font-family:'Rajdhani',sans-serif;">
             </ul>
-          </div>
-          
-          <!-- Feature Importance Chart -->
-          <div style="margin-top:1.5rem;padding:0.75rem;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.12);border-radius:8px;">
-            <div style="font-family:'Orbitron',monospace;font-size:0.65rem;color:var(--blue);margin-bottom:0.5rem;letter-spacing:0.1em;">TOP INFLUENCING FEATURES</div>
-            <div style="height:120px;position:relative;">
-              <canvas id="featureChart"></canvas>
-            </div>
           </div>
 
           <div style="display:flex;gap:0.5rem;margin-top:1rem;">
@@ -730,39 +732,26 @@
 
       <div class="feature-card" data-reveal data-delay="100">
         <span class="feature-icon">🧠</span>
-        <div class="feature-title">AI Health Classification</div>
-        <div class="feature-desc">Random Forest &amp; XGBoost models trained on 19,000+ sensor readings classify transformer health into Normal, Warning, or Critical states with 97%+ accuracy.</div>
+        <div class="feature-title">MongoDB Normalization</div>
+        <div class="feature-desc">Utilizes a normalized schema design with a master <code>transformers</code> details collection and a telemetry <code>transformer_history</code> table.</div>
       </div>
 
       <div class="feature-card" data-reveal data-delay="200">
         <span class="feature-icon">📡</span>
-        <div class="feature-title">Real-time Sensor Fusion</div>
-        <div class="feature-desc">Merges 5 sensor streams — CurrentVoltage, Overview, Power, PowerFactor, TotalPower — into a unified 32-feature real-time analysis pipeline.</div>
+        <div class="feature-title">Feature Engineering</div>
+        <div class="feature-desc">Derived electrical variables (KW, KVA, KVAR, Phase Imbalances) are computed using validated grid formulas and logged under estimated features.</div>
       </div>
 
       <div class="feature-card" data-reveal data-delay="300">
         <span class="feature-icon">⚠️</span>
-        <div class="feature-title">Anomaly Detection</div>
-        <div class="feature-desc">Isolation Forest unsupervised anomaly detection identifies unusual transformer behaviour patterns before they escalate into failures.</div>
+        <div class="feature-title">Fault Priority System</div>
+        <div class="feature-desc">Classification of incident urgency into P1 (Emergency), P2 (High), P3 (Medium), and P4 (Low) to assist dispatch response times.</div>
       </div>
 
       <div class="feature-card" data-reveal data-delay="400">
         <span class="feature-icon">🌡️</span>
-        <div class="feature-title">Thermal Stress Analysis</div>
-        <div class="feature-desc">IEC/IEEE-based health labeling rules monitor OTI, voltage imbalance, and thermal stress factors to predict transformer degradation trajectories.</div>
-      </div>
-
-      <div class="feature-card" data-reveal data-delay="500">
-        <span class="feature-icon">📊</span>
-        <div class="feature-title">Feature Engineering</div>
-        <div class="feature-desc">Advanced feature engineering derives V_imbalance, I_imbalance, Thermal_stress, PF_drop, Load_level, and rolling OTI trends for superior model performance.</div>
-      </div>
-
-      <div class="feature-card" data-reveal data-delay="600" style="position:relative;overflow:hidden;">
-        <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,rgba(59,130,246,0.05),rgba(6,182,212,0.05));"></div>
-        <span class="feature-icon" style="position:relative;">🔮</span>
-        <div class="feature-title" style="position:relative;">Predictive Maintenance</div>
-        <div class="feature-desc" style="position:relative;">End-to-end pipeline: load sensor CSVs → engineer features → train ML → detect anomalies → classify health → generate maintenance recommendations.</div>
+        <div class="feature-title">Future IoT Ready</div>
+        <div class="feature-desc">Database schema supports future ESP32 integration for on-field temperature, OTI, OLI, THD, humidity, and vibration parameters.</div>
       </div>
 
     </div>
@@ -773,36 +762,12 @@
       <div class="tech-pills">
         <span class="tech-pill">Python 3.10</span>
         <span class="tech-pill">Flask</span>
-        <span class="tech-pill">XGBoost</span>
-        <span class="tech-pill">Random Forest</span>
-        <span class="tech-pill">Isolation Forest</span>
+        <span class="tech-pill">MongoDB Atlas</span>
+        <span class="tech-pill">XGBoost / RandomForest</span>
         <span class="tech-pill">Scikit-learn</span>
         <span class="tech-pill">Pandas</span>
-        <span class="tech-pill">NumPy</span>
-        <span class="tech-pill">Joblib</span>
-        <span class="tech-pill">Chart.js</span>
         <span class="tech-pill">Bootstrap 5</span>
-        <span class="tech-pill">CSS Glassmorphism</span>
-      </div>
-    </div>
-
-    <!-- Accuracy Metrics -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem;margin-top:2rem;" data-reveal>
-      <div class="glass-card" style="text-align:center;padding:1.75rem 1rem;">
-        <div style="font-family:'Orbitron',monospace;font-size:2rem;font-weight:800;color:var(--emerald);">97.3%</div>
-        <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;margin-top:0.25rem;">Model Accuracy</div>
-      </div>
-      <div class="glass-card" style="text-align:center;padding:1.75rem 1rem;">
-        <div style="font-family:'Orbitron',monospace;font-size:2rem;font-weight:800;color:var(--blue);">19K+</div>
-        <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;margin-top:0.25rem;">Sensor Readings</div>
-      </div>
-      <div class="glass-card" style="text-align:center;padding:1.75rem 1rem;">
-        <div style="font-family:'Orbitron',monospace;font-size:2rem;font-weight:800;color:var(--cyan);">32</div>
-        <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;margin-top:0.25rem;">Feature Inputs</div>
-      </div>
-      <div class="glass-card" style="text-align:center;padding:1.75rem 1rem;">
-        <div style="font-family:'Orbitron',monospace;font-size:2rem;font-weight:800;color:var(--orange);">3</div>
-        <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;margin-top:0.25rem;">Health States</div>
+        <span class="tech-pill">Chart.js</span>
       </div>
     </div>
 
@@ -813,67 +778,9 @@
      FOOTER
 ══════════════════════════════════════════════════ -->
 <footer>
-  <div class="footer-grid">
-    <div>
-      <a href="#" class="nav-logo" style="display:inline-flex;margin-bottom:1rem;">
-        <div class="nav-logo-icon">⚡</div>
-        <div style="margin-left:12px;">
-          <div class="nav-logo-text">TRANSFORMER AI</div>
-          <div class="nav-logo-sub">Health Monitoring System</div>
-        </div>
-      </a>
-      <p class="footer-brand-tagline">
-        AI-powered predictive maintenance and industrial monitoring system for transformer health analysis.
-        Built on cutting-edge machine learning with Random Forest and XGBoost models.
-      </p>
-      <div class="social-icons">
-        <a href="#" class="social-icon" title="GitHub">⌥</a>
-        <a href="#" class="social-icon" title="LinkedIn">in</a>
-        <a href="#" class="social-icon" title="Email">✉</a>
-        <a href="#" class="social-icon" title="Portfolio">◈</a>
-      </div>
-    </div>
-
-    <div>
-      <div class="footer-col-title">Navigation</div>
-      <ul class="footer-links">
-        <li><a href="#hero">Home</a></li>
-        <li><a href="#dashboard">Dashboard</a></li>
-        <li><a href="#analytics">Analytics</a></li>
-        <li><a href="#predictions">Predictions</a></li>
-        <li><a href="#about">About</a></li>
-      </ul>
-    </div>
-
-    <div>
-      <div class="footer-col-title">ML Pipeline</div>
-      <ul class="footer-links">
-        <li><a href="#">Data Ingestion</a></li>
-        <li><a href="#">Feature Engineering</a></li>
-        <li><a href="#">Model Training</a></li>
-        <li><a href="#">Anomaly Detection</a></li>
-        <li><a href="#">Health Prediction</a></li>
-      </ul>
-    </div>
-
-    <div>
-      <div class="footer-col-title">Sensor Data</div>
-      <ul class="footer-links">
-        <li><a href="#">CurrentVoltage</a></li>
-        <li><a href="#">Overview (OTI/OLI)</a></li>
-        <li><a href="#">Power Metrics</a></li>
-        <li><a href="#">Power Factor</a></li>
-        <li><a href="#">Total Energy</a></li>
-      </ul>
-    </div>
-  </div>
-
   <div class="footer-bottom">
     <div class="footer-bottom-text">
-      © 2024 <span>Transformer AI Monitoring System</span> · Built with Flask + ML · RPPL Transformers Dataset
-    </div>
-    <div class="footer-bottom-text">
-      Models: <span>XGBoost</span> · <span>Random Forest</span> · <span>Isolation Forest</span>
+      © 2026 <span>Transformer AI Monitoring System</span> · Normalised MongoDB Database · RPPL Transformers
     </div>
   </div>
 </footer>

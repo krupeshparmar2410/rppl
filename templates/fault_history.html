@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fault History & Logs | RPPL Transformer Monitoring</title>
+  <meta name="description" content="Search, filter, and export historical transformer fault logs and predictions." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+
+  <!-- Bootstrap 5 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+
+  <style>
+    /* Table styles matching glassmorphic theme */
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+    }
+    .history-table th {
+      padding: 0.8rem 1rem;
+      text-align: left;
+      color: var(--text-secondary);
+      border-bottom: 1px solid rgba(59,130,246,0.15);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .history-table td {
+      padding: 0.8rem 1rem;
+      border-bottom: 1px solid rgba(59,130,246,0.06);
+      color: var(--text-primary);
+      vertical-align: middle;
+    }
+    .history-table tr:hover {
+      background: rgba(59,130,246,0.03);
+    }
+    .status-select {
+      background: rgba(11,16,32,0.8);
+      border: 1px solid rgba(59,130,246,0.3);
+      color: var(--text-primary);
+      border-radius: 4px;
+      padding: 3px 6px;
+      font-size: 0.7rem;
+      font-family: 'Rajdhani', sans-serif;
+      cursor: pointer;
+    }
+    .status-select:focus {
+      outline: none;
+      border-color: var(--cyan);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Background Canvas & Orbs -->
+<canvas id="particles-canvas"></canvas>
+<div class="bg-orb bg-orb-1"></div>
+<div class="bg-orb bg-orb-2"></div>
+<div class="bg-orb bg-orb-3"></div>
+
+<!-- ── NAVBAR ── -->
+<nav class="navbar scrolled" id="navbar" style="top:0;">
+  <a href="/" class="nav-logo">
+    <div class="nav-logo-icon">⚡</div>
+    <div>
+      <div class="nav-logo-text">TRANSFORMER AI</div>
+      <div class="nav-logo-sub">Health Monitoring System</div>
+    </div>
+  </a>
+
+  <ul class="nav-links">
+    <li><a href="/">Home</a></li>
+    <li><a href="/#dashboard">Dashboard</a></li>
+    <li><a href="/#analytics">Analytics</a></li>
+    <li><a href="/#predictions">Predictions</a></li>
+    <li><a href="/fault-history" class="active">Fault History</a></li>
+  </ul>
+
+  <div class="d-flex align-items-center gap-3">
+    <a href="/" class="btn-secondary d-none d-sm-flex" style="padding: 0.4rem 1rem; font-size: 0.75rem;">
+      ← Dashboard
+    </a>
+  </div>
+</nav>
+
+<div class="content-layer" style="padding-top: 110px; padding-bottom: 80px;">
+  <div class="container">
+
+    <div class="section-header" style="margin-bottom: 2rem;">
+      <div class="section-tag">// ARCHIVE LOGS</div>
+      <h2 class="section-title">Fault <span>History Database</span></h2>
+      <p class="section-desc">Search, filter, and export all historical ML predictions and transformer sensor readings.</p>
+    </div>
+
+    <!-- Filters & Search Form -->
+    <div class="glass-card" style="margin-bottom: 1.5rem; padding: 1.5rem;">
+      <form method="GET" action="/fault-history" class="row g-3">
+        <!-- Search -->
+        <div class="col-md-3">
+          <label class="form-label" style="font-family:'Orbitron', monospace; font-size:0.65rem; color:var(--text-secondary);">Search Log</label>
+          <input type="text" name="search" class="form-control" style="background:rgba(11,16,32,0.8); border:1px solid rgba(59,130,246,0.2); color:#fff; font-size:0.75rem; font-family:'Share Tech Mono';" placeholder="ID, Location, Fault Type..." value="{{ search }}" />
+        </div>
+
+        <!-- Health Filter -->
+        <div class="col-md-2">
+          <label class="form-label" style="font-family:'Orbitron', monospace; font-size:0.65rem; color:var(--text-secondary);">Health Status</label>
+          <select name="filter_health" class="form-select" style="background:rgba(11,16,32,0.8); border:1px solid rgba(59,130,246,0.2); color:#fff; font-size:0.75rem; font-family:'Rajdhani';">
+            <option value="">All Health</option>
+            <option value="Healthy" {% if filter_health == 'Healthy' %}selected{% endif %}>Healthy</option>
+            <option value="Warning" {% if filter_health == 'Warning' %}selected{% endif %}>Warning</option>
+            <option value="Critical" {% if filter_health == 'Critical' %}selected{% endif %}>Critical</option>
+          </select>
+        </div>
+
+        <!-- Severity Filter -->
+        <div class="col-md-2">
+          <label class="form-label" style="font-family:'Orbitron', monospace; font-size:0.65rem; color:var(--text-secondary);">Severity</label>
+          <select name="filter_severity" class="form-select" style="background:rgba(11,16,32,0.8); border:1px solid rgba(59,130,246,0.2); color:#fff; font-size:0.75rem; font-family:'Rajdhani';">
+            <option value="">All Severities</option>
+            <option value="Low" {% if filter_severity == 'Low' %}selected{% endif %}>Low</option>
+            <option value="Medium" {% if filter_severity == 'Medium' %}selected{% endif %}>Medium</option>
+            <option value="High" {% if filter_severity == 'High' %}selected{% endif %}>High</option>
+            <option value="Critical" {% if filter_severity == 'Critical' %}selected{% endif %}>Critical</option>
+          </select>
+        </div>
+
+        <!-- Priority Filter -->
+        <div class="col-md-2">
+          <label class="form-label" style="font-family:'Orbitron', monospace; font-size:0.65rem; color:var(--text-secondary);">Priority</label>
+          <select name="filter_priority" class="form-select" style="background:rgba(11,16,32,0.8); border:1px solid rgba(59,130,246,0.2); color:#fff; font-size:0.75rem; font-family:'Rajdhani';">
+            <option value="">All Priorities</option>
+            <option value="P1" {% if filter_priority == 'P1' %}selected{% endif %}>P1 - Emergency</option>
+            <option value="P2" {% if filter_priority == 'P2' %}selected{% endif %}>P2 - High</option>
+            <option value="P3" {% if filter_priority == 'P3' %}selected{% endif %}>P3 - Medium</option>
+            <option value="P4" {% if filter_priority == 'P4' %}selected{% endif %}>P4 - Low</option>
+          </select>
+        </div>
+
+        <!-- Maintenance Filter -->
+        <div class="col-md-2">
+          <label class="form-label" style="font-family:'Orbitron', monospace; font-size:0.65rem; color:var(--text-secondary);">Maintenance Status</label>
+          <select name="filter_maintenance" class="form-select" style="background:rgba(11,16,32,0.8); border:1px solid rgba(59,130,246,0.2); color:#fff; font-size:0.75rem; font-family:'Rajdhani';">
+            <option value="">All Statuses</option>
+            <option value="Pending" {% if filter_maintenance == 'Pending' %}selected{% endif %}>Pending</option>
+            <option value="Acknowledged" {% if filter_maintenance == 'Acknowledged' %}selected{% endif %}>Acknowledged</option>
+            <option value="Assigned" {% if filter_maintenance == 'Assigned' %}selected{% endif %}>Assigned</option>
+            <option value="In Progress" {% if filter_maintenance == 'In Progress' %}selected{% endif %}>In Progress</option>
+            <option value="Resolved" {% if filter_maintenance == 'Resolved' %}selected{% endif %}>Resolved</option>
+          </select>
+        </div>
+
+        <!-- Sorting -->
+        <div class="col-md-2">
+          <label class="form-label" style="font-family:'Orbitron', monospace; font-size:0.65rem; color:var(--text-secondary);">Sort By</label>
+          <select name="sort_by" class="form-select" style="background:rgba(11,16,32,0.8); border:1px solid rgba(59,130,246,0.2); color:#fff; font-size:0.75rem; font-family:'Rajdhani';">
+            <option value="timestamp_desc" {% if sort_by == 'timestamp_desc' %}selected{% endif %}>Newest First</option>
+            <option value="timestamp_asc" {% if sort_by == 'timestamp_asc' %}selected{% endif %}>Oldest First</option>
+            <option value="health_desc" {% if sort_by == 'health_desc' %}selected{% endif %}>Health Score (High-Low)</option>
+            <option value="health_asc" {% if sort_by == 'health_asc' %}selected{% endif %}>Health Score (Low-High)</option>
+            <option value="priority_asc" {% if sort_by == 'priority_asc' %}selected{% endif %}>Priority (P1-P4)</option>
+          </select>
+        </div>
+
+        <!-- Buttons -->
+        <div class="col-md-2 d-flex align-items-end gap-2">
+          <button type="submit" class="btn-primary" style="flex:1; justify-content:center; padding:0.5rem 0; font-size:0.75rem;">
+            Filter
+          </button>
+          <a href="/fault-history" class="btn-secondary" style="flex:1; justify-content:center; padding:0.5rem 0; font-size:0.75rem; text-decoration:none; text-align:center;">
+            Clear
+          </a>
+        </div>
+      </form>
+    </div>
+
+    <!-- Export Buttons -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
+      <div style="font-family:'Orbitron', monospace; font-size:0.75rem; color:var(--text-secondary);">
+        Found <span style="color:var(--cyan); font-weight:bold;">{{ total_records }}</span> records
+      </div>
+      <div class="d-flex gap-2">
+        <a href="/fault-history/export/csv?search={{ search }}&filter_health={{ filter_health }}&filter_maintenance={{ filter_maintenance }}&filter_severity={{ filter_severity }}&filter_priority={{ filter_priority }}" class="btn-secondary" style="padding: 0.35rem 0.8rem; font-size:0.7rem;">
+          📥 Export CSV
+        </a>
+        <a href="/fault-history/export/excel?search={{ search }}&filter_health={{ filter_health }}&filter_maintenance={{ filter_maintenance }}&filter_severity={{ filter_severity }}&filter_priority={{ filter_priority }}" class="btn-secondary" style="padding: 0.35rem 0.8rem; font-size:0.7rem;">
+          📊 Export Excel
+        </a>
+        <a href="/fault-history/export/pdf?search={{ search }}&filter_health={{ filter_health }}&filter_maintenance={{ filter_maintenance }}&filter_severity={{ filter_severity }}&filter_priority={{ filter_priority }}" target="_blank" class="btn-secondary" style="padding: 0.35rem 0.8rem; font-size:0.7rem;">
+          📄 Export PDF
+        </a>
+      </div>
+    </div>
+
+    <!-- Fault History Table -->
+    <div class="glass-card" style="padding:0; overflow-hidden:true;">
+      <div style="overflow-x:auto;">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Transformer ID</th>
+              <th>Location</th>
+              <th>Service Station</th>
+              <th>Health Status</th>
+              <th>Fault Type</th>
+              <th>Severity</th>
+              <th>Priority</th>
+              <th>Health Score</th>
+              <th>Device Timestamp</th>
+              <th>Maintenance Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in records %}
+            <tr>
+              <td style="color:var(--blue); font-weight:bold;">{{ r.transformer_id }}</td>
+              <td>{{ r.location }}</td>
+              <td>{{ r.service_station }}</td>
+              <td>
+                <span class="status-badge {% if r.predicted_health == 'Healthy' %}normal{% elif r.predicted_health == 'Warning' %}warning{% else %}critical{% endif %}" style="font-size:0.6rem; padding:0.2rem 0.5rem;">
+                  {{ r.predicted_health }}
+                </span>
+              </td>
+              <td>{{ r.fault_type or 'None' }}</td>
+              <td>
+                <span style="font-weight:600; color:
+                  {% if r.fault_severity == 'Critical' %}#EF4444
+                  {% elif r.fault_severity == 'High' %}#F59E0B
+                  {% elif r.fault_severity == 'Medium' %}#3B82F6
+                  {% else %}#10B981{% endif %};">
+                  {{ r.fault_severity or 'Low' }}
+                </span>
+              </td>
+              <td style="font-weight:bold; font-size:0.8rem; color:
+                {% if r.fault_priority == 'P1' %}#EF4444
+                {% elif r.fault_priority == 'P2' %}#F59E0B
+                {% elif r.fault_priority == 'P3' %}#3B82F6
+                {% else %}#10B981{% endif %};">
+                {{ r.fault_priority or 'P4' }}
+              </td>
+              <td style="font-weight:bold; font-size:0.8rem;">
+                {% if r.health_score is not none %}{{ r.health_score }}%{% else %}--{% endif %}
+              </td>
+              <td>{{ r.DeviceTimeStamp }}</td>
+              <td>
+                <select class="status-select" onchange="updateMaintenance('{{ r._id }}', this.value)">
+                  <option value="Pending" {% if r.maintenance_status == 'Pending' %}selected{% endif %}>Pending</option>
+                  <option value="Acknowledged" {% if r.maintenance_status == 'Acknowledged' %}selected{% endif %}>Acknowledged</option>
+                  <option value="Assigned" {% if r.maintenance_status == 'Assigned' %}selected{% endif %}>Assigned</option>
+                  <option value="In Progress" {% if r.maintenance_status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                  <option value="Resolved" {% if r.maintenance_status == 'Resolved' %}selected{% endif %}>Resolved</option>
+                </select>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="10" style="text-align:center; padding:2rem; color:var(--text-secondary);">
+                No historical records match the query.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="d-flex justify-content-center" style="margin-top:1.5rem;">
+      <nav aria-label="Page navigation">
+        <ul class="pagination gap-2" style="border:none;">
+          <li class="page-item {% if page == 1 %}disabled{% endif %}">
+            <a class="page-link btn-secondary" style="padding:0.4rem 0.8rem; font-size:0.75rem; border-radius:5px;" href="?page={{ page-1 }}&search={{ search }}&sort_by={{ sort_by }}&filter_health={{ filter_health }}&filter_maintenance={{ filter_maintenance }}&filter_severity={{ filter_severity }}&filter_priority={{ filter_priority }}">Previous</a>
+          </li>
+          
+          {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+            <li class="page-item active">
+              <span class="page-link btn-primary" style="padding:0.4rem 0.8rem; font-size:0.75rem; border-radius:5px;">{{ p }}</span>
+            </li>
+            {% else %}
+            <li class="page-item">
+              <a class="page-link btn-secondary" style="padding:0.4rem 0.8rem; font-size:0.75rem; border-radius:5px;" href="?page={{ p }}&search={{ search }}&sort_by={{ sort_by }}&filter_health={{ filter_health }}&filter_maintenance={{ filter_maintenance }}&filter_severity={{ filter_severity }}&filter_priority={{ filter_priority }}">{{ p }}</a>
+            </li>
+            {% endif %}
+          {% endfor %}
+          
+          <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+            <a class="page-link btn-secondary" style="padding:0.4rem 0.8rem; font-size:0.75rem; border-radius:5px;" href="?page={{ page+1 }}&search={{ search }}&sort_by={{ sort_by }}&filter_health={{ filter_health }}&filter_maintenance={{ filter_maintenance }}&filter_severity={{ filter_severity }}&filter_priority={{ filter_priority }}">Next</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-bottom">
+    <div class="footer-bottom-text">
+      © 2026 <span>Transformer AI Monitoring System</span> · RPPL Transformers normalised database
+    </div>
+  </div>
+</footer>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+<script>
+  // Function to call the update maintenance endpoint dynamically
+  function updateMaintenance(recordId, newStatus) {
+      fetch('/api/update-maintenance', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+              record_id: recordId,
+              status: newStatus
+          })
+      })
+      .then(response => response.json())
+      .then(data => {
+          if (data.success) {
+              showNotification(`Status updated to ${newStatus} successfully`, 'success');
+          } else {
+              showNotification(data.error || 'Failed to update status', 'error');
+          }
+      })
+      .catch(err => {
+          console.error(err);
+          showNotification('Error communicating with server', 'error');
+      });
+  }
+
+  // Reuse Notification handler
+  function showNotification(message, type = 'info') {
+    const notif = document.createElement('div');
+    const colors = { info: '#3B82F6', error: '#EF4444', success: '#10B981' };
+    notif.style.cssText = `
+      position:fixed; bottom:2rem; right:2rem; z-index:9999;
+      padding:1rem 1.5rem; border-radius:10px;
+      background:rgba(11,16,32,0.95); border:1px solid ${colors[type]};
+      color:#F1F5F9; font-family:'Rajdhani',sans-serif; font-size:0.9rem;
+      box-shadow:0 0 20px ${colors[type]}40;
+      animation:fade-up 0.3s ease both;
+      backdrop-filter:blur(16px);
+    `;
+    notif.textContent = message;
+    document.body.appendChild(notif);
+    setTimeout(() => notif.remove(), 4000);
+  }
+</script>
+
+</body>
+</html>

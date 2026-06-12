@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transformer Fault History Report - RPPL</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            margin: 20px;
+            font-size: 11px;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            color: #1A365D;
+        }
+        .header p {
+            margin: 5px 0 0 0;
+            font-size: 11px;
+            color: #666;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            color: #1A365D;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+        .badge {
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 9px;
+            text-transform: uppercase;
+        }
+        .badge-healthy { background-color: #DEF7EC; color: #03543F; }
+        .badge-warning { background-color: #FDF6B2; color: #723B10; }
+        .badge-critical { background-color: #FDE8E8; color: #9B1C1C; }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 9px;
+            color: #777;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+        @media print {
+            .no-print {
+                display: none;
+            }
+            body {
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="margin-bottom: 20px; text-align: right;">
+        <button onclick="window.print()" style="padding: 8px 16px; background-color: #1A365D; color: white; border: none; border-radius: 4px; cursor: pointer;">Print Report</button>
+    </div>
+    
+    <div class="header">
+        <h1>RPPL TRANSFORMER HEALTH MONITORING SYSTEM</h1>
+        <p>Generated on: {{ datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') }} · Fault History Report</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Transformer ID</th>
+                <th>Location</th>
+                <th>Service Station</th>
+                <th>Health Status</th>
+                <th>Fault Type</th>
+                <th>Severity</th>
+                <th>Priority</th>
+                <th>Health Score</th>
+                <th>Maintenance Status</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in records %}
+            <tr>
+                <td><strong>{{ r.transformer_id }}</strong></td>
+                <td>{{ r.location }}</td>
+                <td>{{ r.service_station }}</td>
+                <td>
+                    <span class="badge {% if r.predicted_health == 'Healthy' %}badge-healthy{% elif r.predicted_health == 'Warning' %}badge-warning{% else %}badge-critical{% endif %}">
+                        {{ r.predicted_health }}
+                    </span>
+                </td>
+                <td>{{ r.fault_type or 'None' }}</td>
+                <td>{{ r.fault_severity or 'Low' }}</td>
+                <td><strong>{{ r.fault_priority or 'P4' }}</strong></td>
+                <td>{{ r.health_score }}%</td>
+                <td>{{ r.maintenance_status }}</td>
+                <td>{{ r.DeviceTimeStamp }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="10" style="text-align: center;">No history records available.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        © {{ datetime.datetime.now().year }} RPPL Transformers - Industrial Intelligence Platform. All rights reserved.
+    </div>
+
+    <script>
+        // Auto trigger browser print window on load
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+            }, 500);
+        };
+    </script>
+</body>
+</html>
