@@ -9,17 +9,47 @@ import os
 import io
 import time
 import datetime
+import uuid
+import sys
 from collections import Counter
 
 import pandas as pd
 import numpy as np
 import joblib
-from flask import Flask, render_template, request, jsonify, send_file, Response
+from flask import Flask, render_template, request, jsonify, send_file, Response, g
 from werkzeug.utils import secure_filename
 
-# Import database, feature engineering, and services modules
+# ── 1. Centralized Logger Initialization ─────────────────────────────────
+from utils.logger import get_logger
+logger = get_logger("TransformerApp")
+
+# ── 2. Startup Uptime Start Time ──────────────────────────────────────────
+START_TIME = time.time()
+
+# ── 3. Environment Variable Validation (Task 7 + Graceful startup check) ──
+def validate_env_vars():
+    """
+    Validates required and optional environment variables.
+    Exits gracefully using sys.exit(1) with a clear CRITICAL log if MONGO_URI is missing or invalid.
+    """
+    mongo_uri = os.environ.get("MONGO_URI")
+    if not mongo_uri:
+        logger.critical("MONGO_URI environment variable is missing.")
+        sys.exit(1)
+    if not (mongo_uri.startswith("mongodb://") or mongo_uri.startswith("mongodb+srv://")):
+        logger.critical(f"MONGO_URI environment variable is invalid. Value: '{mongo_uri}'.")
+        sys.exit(1)
+    
+    optional_vars = ["MAIL_SERVER", "MAIL_PORT", "MAIL_USERNAME", "MAIL_PASSWORD", "MAIL_RECIPIENT"]
+    missing_optionals = [v for v in optional_vars if not os.environ.get(v)]
+    if missing_optionals:
+        logger.warning(f"Optional environment variables are missing: {', '.join(missing_optionals)}. Email alerts will fall back to log simulation.")
+
+validate_env_vars()
+
+# ── 4. Load Database and Other Dependencies ──────────────────────────────
 from database.mongodb import (
-    transformers_col, history_col, insert_prediction, 
+    db, transformers_col, history_col, insert_prediction, 
     update_alert_sent, update_maintenance_status, get_history, 
     get_dashboard_stats, get_analytics_data, get_transformer_health_timeline
 )
@@ -31,7 +61,6 @@ from services.prediction_service import (
     get_fault_priority, get_maintenance_recommendations, get_reliability
 )
 from services.email_service import send_fault_alert_email
-from utils.logger import get_logger
 from utils.error_handlers import register_error_handlers
 from validators.input_validator import validate_sensor_data
 
@@ -42,7 +71,6 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024   # 50 MB max upload
 ALLOWED_EXTENSIONS = {'csv'}
 
 os.makedirs('uploads', exist_ok=True)
-logger = get_logger("TransformerApp")
 
 register_error_handlers(app)
 
@@ -65,21 +93,123 @@ class ModelManager:
 model_manager = ModelManager()
 model_manager.load()
 
+# ── Startup System Summary Logger (Phase 1 improvement) ───────────────────
+def log_startup_summary():
+    """Outputs a clean system summary block in logs on successful application startup."""
+    mongodb_status = "Disconnected"
+    try:
+        db.client.admin.command('ping')
+        mongodb_status = "Connected"
+    except Exception:
+        pass
+        
+    model_status = "Loaded" if (model_manager.model is not None and model_manager.feature_list is not None) else "Unloaded"
+    transformers_avail = "Available" if (transformers_col is not None) else "Unavailable"
+    history_avail = "Available" if (history_col is not None) else "Unavailable"
+    
+    logger.info(
+        "\n" + "="*50 +
+        "\nRPPL Transformer Monitoring Platform" +
+        f"\nVersion: 1.0.0" +
+        f"\nMongoDB: {mongodb_status}" +
+        f"\nModel: {model_status}" +
+        f"\nTransformers Collection: {transformers_avail}" +
+        f"\nHistory Collection: {history_avail}" +
+        f"\nStartup Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}" +
+        "\n" + "="*50
+    )
+
+log_startup_summary()
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# ── Request ID Logging Middleware (Phase 1 improvement) ───────────────────
+@app.before_request
+def before_request_hook():
+    """Generates a unique Request ID for each incoming request and logs request start."""
+    g.request_id = uuid.uuid4().hex[:8]
+    logger.info(f"RequestID={g.request_id} | {request.method} {request.path} started")
+
+@app.after_request
+def after_request_hook(response):
+    """Logs request completion with status code and Request ID."""
+    req_id = getattr(g, 'request_id', 'N/A')
+    logger.info(f"RequestID={req_id} | {request.method} {request.path} completed with status {response.status_code}")
+    return response
 
 # ═════════════════════════════ ROUTES ════════════════════════════════════
 
 @app.route('/')
 def index():
     # Fetch active list of master transformers for the dropdown
-    transformers = list(transformers_col.find({}))
+    req_id = getattr(g, 'request_id', 'N/A')
+    try:
+        transformers = list(transformers_col.find({}))
+    except Exception as e:
+        logger.error(f"RequestID={req_id} | Failed to fetch transformers for homepage: {e}")
+        transformers = []
     return render_template('index.html', transformers=transformers)
 
-# ── Health Check Endpoint ─────────────────────────────────────────────────
+# ── Health Check Endpoint (Task 4 + Task 8 improvements) ──────────────────
 @app.route('/health')
 def health_check():
-    return jsonify({"status": "healthy"})
+    mongodb_status = "disconnected"
+    req_id = getattr(g, 'request_id', 'N/A')
+    
+    try:
+        db.client.admin.command('ping')
+        mongodb_status = "connected"
+    except Exception as e:
+        logger.error(f"RequestID={req_id} | Health check database ping failed: {e}")
+        
+    if mongodb_status == "disconnected":
+        return jsonify({
+            "status": "degraded",
+            "mongodb": "disconnected"
+        }), 503
+
+    model_status = "loaded" if (model_manager.model is not None and model_manager.feature_list is not None) else "unloaded"
+    uptime = int(time.time() - START_TIME)
+    
+    return jsonify({
+        "status": "healthy",
+        "mongodb": "connected",
+        "model": model_status,
+        "version": "1.0.0",
+        "uptime_seconds": uptime,
+        "timestamp": datetime.datetime.now().isoformat()
+    })
+
+# ── System Status Endpoint (Task 5 operational diagnostics) ───────────────
+@app.route('/api/system-status')
+def system_status():
+    mongodb_status = "disconnected"
+    transformers_count = 0
+    history_count = 0
+    req_id = getattr(g, 'request_id', 'N/A')
+    
+    try:
+        db.client.admin.command('ping')
+        mongodb_status = "connected"
+        transformers_count = transformers_col.count_documents({})
+        history_count = history_col.count_documents({})
+    except Exception as e:
+        logger.error(f"RequestID={req_id} | System status database check failed: {e}")
+        
+    model_status = "loaded" if (model_manager.model is not None and model_manager.feature_list is not None) else "unloaded"
+    uptime_seconds = int(time.time() - START_TIME)
+    uptime_str = str(datetime.timedelta(seconds=uptime_seconds))
+    
+    return jsonify({
+        "mongodb": mongodb_status,
+        "model": model_status,
+        "transformers": transformers_count,
+        "history_records": history_count,
+        "version": "1.0.0",
+        "uptime": uptime_str,
+        "timestamp": datetime.datetime.now().isoformat()
+    })
 
 # ── Model Info Endpoint ───────────────────────────────────────────────────
 @app.route('/api/model-info')
@@ -96,21 +226,30 @@ def model_info():
 @app.route('/predict', methods=['POST'])
 def predict():
     start_time = time.time()
+    req_id = getattr(g, 'request_id', 'N/A')
     
     if model_manager.model is None or model_manager.feature_list is None:
+        logger.error(f"RequestID={req_id} | ML model not loaded on server.")
         return jsonify({'success': False, 'error': 'ML model not loaded.'}), 503
 
     if 'file' not in request.files:
+        logger.warning(f"RequestID={req_id} | Missing file in CSV upload request.")
         return jsonify({'success': False, 'error': 'No file in request.'}), 400
 
     file = request.files['file']
     if file.filename == '' or not allowed_file(file.filename):
+        logger.warning(f"RequestID={req_id} | Invalid file uploaded: '{file.filename}'.")
         return jsonify({'success': False, 'error': 'Please upload a valid .csv file.'}), 400
 
     transformer_id = request.form.get('transformer_id', 'TR001')
     
     # Retrieve transformer metadata from master collection
-    t_metadata = transformers_col.find_one({"transformer_id": transformer_id})
+    try:
+        t_metadata = transformers_col.find_one({"transformer_id": transformer_id})
+    except Exception as e:
+        logger.error(f"RequestID={req_id} | Database query failed for metadata lookup: {e}")
+        t_metadata = None
+        
     if not t_metadata:
         # Default fallback metadata
         t_metadata = {
@@ -124,29 +263,32 @@ def predict():
     try:
         df = pd.read_csv(io.StringIO(file.read().decode('utf-8')))
     except Exception as e:
+        logger.warning(f"RequestID={req_id} | Parse failure on CSV data: {e}")
         return jsonify({'success': False, 'error': f'CSV parse error: {e}'}), 400
 
     if df.empty:
+        logger.warning(f"RequestID={req_id} | Uploaded CSV is empty.")
         return jsonify({'success': False, 'error': 'Uploaded CSV is empty.'}), 400
 
     # 1. Feature Engineering (reconstructs 31 features, leaves OTI/OLI/THD as NaN for database)
     try:
         df_engineered = engineer_transformer_features(df)
     except Exception as e:
-        logger.error(f"Feature engineering error: {e}")
+        logger.error(f"RequestID={req_id} | Feature engineering error: {e}")
         return jsonify({'success': False, 'error': f'Feature engineering error: {e}'}), 400
 
     # 2. Fill standard defaults for ML model compatibility (OTI=45, OLI=60, THD=1.2%)
     try:
         df_ml = prepare_for_ml(df_engineered, model_manager.feature_list)
     except Exception as e:
-        logger.error(f"ML preparation error: {e}")
+        logger.error(f"RequestID={req_id} | ML preparation error: {e}")
         return jsonify({'success': False, 'error': f'ML preparation error: {e}'}), 400
 
     # 3. Validation
     is_valid, df_clean, quality_report, err_msg = validate_sensor_data(df_ml, model_manager.feature_list)
     
     if not is_valid:
+        logger.warning(f"RequestID={req_id} | CSV validation failure: {err_msg}")
         return jsonify({
             'success': False, 
             'error': err_msg,
@@ -159,7 +301,7 @@ def predict():
         preds = model_manager.model.predict(df_clean)
         probas = model_manager.model.predict_proba(df_clean)
     except Exception as e:
-        logger.error(f"Model prediction error: {e}")
+        logger.error(f"RequestID={req_id} | Model prediction error: {e}")
         return jsonify({'success': False, 'error': f'Model prediction error: {e}'}), 500
 
     # Calculate overall summary counts
@@ -226,7 +368,7 @@ def predict():
             "THDIL1": None,
             "THDIL2": None,
             "THDIL3": None,
-            "temperature": None, # Stored as null to indicate future IoT sensor parameters
+            "temperature": None,
             "humidity": None,
             "vibration": None,
             
@@ -244,7 +386,8 @@ def predict():
         
         # Save record
         record_id = insert_prediction(db_doc)
-        inserted_ids.append(record_id)
+        if record_id:
+            inserted_ids.append(record_id)
         
         # Trigger Email Alert for Critical Fault (P1 or P2)
         if health_label == "Critical" and not alert_triggered:
@@ -263,12 +406,12 @@ def predict():
                 maintenance_status="Pending",
                 device_timestamp=db_doc["DeviceTimeStamp"]
             )
-            if alert_sent:
+            if alert_sent and record_id:
                 update_alert_sent(record_id, True)
                 alert_triggered = True
 
     elapsed_time = time.time() - start_time
-    logger.info(f"Processed batch of {total_rows} rows in {elapsed_time:.3f}s. Result: {overall_status_label}")
+    logger.info(f"RequestID={req_id} | Processed batch of {total_rows} rows in {elapsed_time:.3f}s. Result: {overall_status_label}")
 
     status_classes = {0: 'normal', 1: 'warning', 2: 'critical'}
     status_icons = {0: '✅', 1: '⚠️', 2: '🔴'}
@@ -319,18 +462,25 @@ def sensor_data():
     Validates, fills missing features, runs inference, saves to MongoDB, 
     manages alert notifications, and returns predictions.
     """
+    req_id = getattr(g, 'request_id', 'N/A')
     if model_manager.model is None or model_manager.feature_list is None:
+        logger.error(f"RequestID={req_id} | ML model not loaded on server.")
         return jsonify({'success': False, 'error': 'ML model not loaded.'}), 503
         
     data = request.get_json() or {}
     transformer_id = data.get('transformer_id')
     if not transformer_id:
+        logger.warning(f"RequestID={req_id} | Missing transformer_id in JSON payload.")
         return jsonify({'success': False, 'error': 'transformer_id is required.'}), 400
         
     # Get master metadata
-    t_metadata = transformers_col.find_one({"transformer_id": transformer_id})
+    try:
+        t_metadata = transformers_col.find_one({"transformer_id": transformer_id})
+    except Exception as e:
+        logger.error(f"RequestID={req_id} | Database query failed for metadata lookup: {e}")
+        t_metadata = None
+        
     if not t_metadata:
-        # Default fallback
         t_metadata = {
             "transformer_id": transformer_id,
             "location": data.get("location", "Gujarat"),
@@ -366,6 +516,7 @@ def sensor_data():
         pred_code = int(model_manager.model.predict(df_ml)[0])
         proba = model_manager.model.predict_proba(df_ml)[0]
     except Exception as e:
+        logger.error(f"RequestID={req_id} | ML model inference failure: {e}")
         return jsonify({'success': False, 'error': f'ML Prediction error: {e}'}), 500
 
     row_ml_risk = float(proba[1] + proba[2])
@@ -424,7 +575,7 @@ def sensor_data():
             maintenance_status="Pending",
             device_timestamp=db_doc["DeviceTimeStamp"]
         )
-        if alert_sent:
+        if alert_sent and record_id:
             update_alert_sent(record_id, True)
 
     return jsonify({
@@ -463,6 +614,7 @@ def transformer_health_timeline(transformer_id):
 # ── Fault History View Route ──────────────────────────────────────────────
 @app.route('/fault-history')
 def fault_history():
+    req_id = getattr(g, 'request_id', 'N/A')
     search = request.args.get('search')
     sort_by = request.args.get('sort_by', 'timestamp_desc')
     filter_health = request.args.get('filter_health')
@@ -479,8 +631,11 @@ def fault_history():
     
     total_pages = max(1, (total + 14) // 15)
     
-    # Pass metadata list for filters
-    transformers = list(transformers_col.find({}))
+    try:
+        transformers = list(transformers_col.find({}))
+    except Exception as e:
+        logger.error(f"RequestID={req_id} | Database list find query failed for transformers: {e}")
+        transformers = []
     
     return render_template(
         'fault_history.html', 
@@ -503,29 +658,35 @@ def update_maintenance():
     data = request.get_json() or {}
     record_id = data.get('record_id')
     status = data.get('status')
+    req_id = getattr(g, 'request_id', 'N/A')
     
     if not record_id or not status:
+        logger.warning(f"RequestID={req_id} | Missing payload parameters inside update_maintenance request.")
         return jsonify({"success": False, "error": "record_id and status are required."}), 400
         
     allowed_statuses = ["Pending", "Acknowledged", "Assigned", "In Progress", "Resolved"]
     if status not in allowed_statuses:
+        logger.warning(f"RequestID={req_id} | Invalid maintenance status value received: '{status}'.")
         return jsonify({"success": False, "error": f"Invalid status. Allowed values: {allowed_statuses}"}), 400
         
     success = update_maintenance_status(record_id, status)
     if success:
         return jsonify({"success": True})
+    
+    logger.error(f"RequestID={req_id} | Database operation failed for record status update.")
     return jsonify({"success": False, "error": "Record update failed."}), 500
 
 # ── Reporting Exports (CSV / Excel / PDF) ──────────────────────────────────
 @app.route('/fault-history/export/csv')
 def export_csv():
     """Exports history to CSV file."""
-    records, _ = get_history(page=1, per_page=10000) # Fetch up to 10k records
+    req_id = getattr(g, 'request_id', 'N/A')
+    records, _ = get_history(page=1, per_page=10000)
     if not records:
+        logger.warning(f"RequestID={req_id} | No records found for CSV export.")
         return Response("No records available to export.", status=400)
         
     df = pd.DataFrame(records)
-    # Filter desired columns for output report
     columns_to_keep = [
         "transformer_id", "location", "service_station", "predicted_health", 
         "fault_severity", "fault_priority", "confidence_score", 
@@ -533,8 +694,6 @@ def export_csv():
     ]
     columns_to_keep = [c for c in columns_to_keep if c in df.columns]
     df_out = df[columns_to_keep]
-    
-    # Rename for professional view
     df_out.columns = [c.replace("_", " ").title() for c in df_out.columns]
     
     csv_buffer = io.StringIO()
@@ -549,8 +708,10 @@ def export_csv():
 @app.route('/fault-history/export/excel')
 def export_excel():
     """Exports history to Excel (.xlsx) file using openpyxl."""
+    req_id = getattr(g, 'request_id', 'N/A')
     records, _ = get_history(page=1, per_page=10000)
     if not records:
+        logger.warning(f"RequestID={req_id} | No records found for Excel export.")
         return Response("No records available to export.", status=400)
         
     df = pd.DataFrame(records)
@@ -578,15 +739,14 @@ def export_excel():
 @app.route('/fault-history/export/pdf')
 def export_pdf():
     """Renders a print-ready HTML page that auto-opens print options (PDF)."""
-    # Fetch all records for printing
     records, _ = get_history(page=1, per_page=500)
     return render_template('fault_history_pdf.html', records=records)
 
 # ─────────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
-    print("=" * 55)
-    print("  [SYSTEM] TRANSFORMER AI — Health Monitoring System")
-    print(f"  Model : {'[READY] Ready' if model_manager.model else '[ERROR] Not found'}")
-    print("  URL   : http://localhost:5000")
-    print("=" * 55)
+    logger.info("=" * 55)
+    logger.info("  [SYSTEM] TRANSFORMER AI — Health Monitoring System")
+    logger.info(f"  Model : {'[READY] Ready' if model_manager.model else '[ERROR] Not found'}")
+    logger.info("  URL   : http://localhost:5000")
+    logger.info("=" * 55)
     app.run(debug=False, host='0.0.0.0', port=5000)

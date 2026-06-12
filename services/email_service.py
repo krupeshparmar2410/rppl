@@ -13,14 +13,22 @@ from email.mime.text import MIMEText
 
 # Retrieve database helpers for cooldown checks
 from database.mongodb import get_last_alert_time
+from utils.logger import get_logger
 
-# SMTP Settings from environment variables
-SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
-SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
-SMTP_USER = os.environ.get("SMTP_USER", "")
-SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
-SMTP_DEFAULT_SENDER = os.environ.get("SMTP_DEFAULT_SENDER", "alerts@rpplmonitoring.com")
-ALERT_RECIPIENT_EMAIL = os.environ.get("ALERT_RECIPIENT_EMAIL", "")
+logger = get_logger("email_service")
+
+# SMTP Settings from environment variables (Task 7 + backward compatibility)
+SMTP_SERVER = os.environ.get("MAIL_SERVER") or os.environ.get("SMTP_SERVER") or "smtp.gmail.com"
+SMTP_PORT_RAW = os.environ.get("MAIL_PORT") or os.environ.get("SMTP_PORT") or "587"
+try:
+    SMTP_PORT = int(SMTP_PORT_RAW)
+except ValueError:
+    SMTP_PORT = 587
+
+SMTP_USER = os.environ.get("MAIL_USERNAME") or os.environ.get("SMTP_USER") or ""
+SMTP_PASSWORD = os.environ.get("MAIL_PASSWORD") or os.environ.get("SMTP_PASSWORD") or ""
+SMTP_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER") or os.environ.get("SMTP_DEFAULT_SENDER") or "alerts@rpplmonitoring.com"
+ALERT_RECIPIENT_EMAIL = os.environ.get("MAIL_RECIPIENT") or os.environ.get("ALERT_RECIPIENT_EMAIL") or ""
 
 def send_fault_alert_email(transformer_id, location, service_station, latitude, longitude, 
                            predicted_health, fault_type, fault_severity, fault_priority, 
@@ -37,7 +45,7 @@ def send_fault_alert_email(transformer_id, location, service_station, latitude, 
         # last_alert is a datetime object
         elapsed_minutes = (current_time - last_alert).total_seconds() / 60.0
         if elapsed_minutes < 30.0:
-            print(f"[EMAIL] Skipping alert email for {transformer_id}: Cooldown active ({elapsed_minutes:.1f}m elapsed, threshold is 30m).")
+            logger.info(f"Skipping alert email for {transformer_id}: Cooldown active ({elapsed_minutes:.1f}m elapsed, threshold is 30m).")
             return False
 
     # ── Prepare Email Body ───────────────────────────────────────────────────
@@ -67,16 +75,10 @@ Immediate inspection required.
 """
 
     # ── Dev Fallback Check ────────────────────────────────────────────────────
-    # If SMTP settings are not provided, print alert to console & logs and return True (simulated success)
+    # If SMTP settings are not provided, log alert and return True (simulated success)
     if not SMTP_USER or not SMTP_PASSWORD or not ALERT_RECIPIENT_EMAIL:
-        print("\n" + "="*70)
-        print("  [ALERT SIMULATION] CRITICAL FAULT EMAIL ALERT TRIGGERED")
-        print("="*70)
-        print(f"  Subject: {subject}")
-        print(f"  To     : {ALERT_RECIPIENT_EMAIL or '[NOT CONFIGURED - log fallback]'}")
-        print("-"*70)
-        print(body)
-        print("="*70 + "\n")
+        logger.warning("SMTP credentials not fully configured. Simulating critical fault email alert:")
+        logger.warning(f"\n{'='*70}\n[ALERT SIMULATION] CRITICAL FAULT EMAIL ALERT TRIGGERED\n{'='*70}\nSubject: {subject}\nTo     : {ALERT_RECIPIENT_EMAIL or '[NOT CONFIGURED]'}\n{'-'*70}\n{body}{'='*70}\n")
         return True
 
     # ── Send Real Email ──────────────────────────────────────────────────────
@@ -95,10 +97,9 @@ Immediate inspection required.
         server.sendmail(SMTP_DEFAULT_SENDER, [ALERT_RECIPIENT_EMAIL], msg.as_string())
         server.quit()
         
-        print(f"[EMAIL] Alert email dispatched successfully for {transformer_id} to {ALERT_RECIPIENT_EMAIL}.")
+        logger.info(f"Alert email dispatched successfully for {transformer_id} to {ALERT_RECIPIENT_EMAIL}.")
         return True
     except Exception as e:
-        print(f"[EMAIL] Failed to send email alert for {transformer_id}: {e}")
-        # Return True for simulation robustness in case of transient local network issues, 
-        # but print warning
+        logger.error(f"Failed to send email alert for {transformer_id}: {e}")
+        # Return False to indicate failure
         return False

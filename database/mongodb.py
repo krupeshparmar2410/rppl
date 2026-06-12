@@ -6,21 +6,27 @@
 """
 
 import os
+import sys
+import time
 import datetime
 from bson import ObjectId
 from pymongo import MongoClient, DESCENDING
+from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 
-# Retrieve MongoDB URI from environment variables, fallback to local host
+# Import centralized logger
+from utils.logger import get_logger
+
+logger = get_logger("mongodb")
+
+# Retrieve MongoDB URI from environment variables
 MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017/")
 DB_NAME = "transformer_monitoring"
 
-# Connect to MongoDB
-client = MongoClient(MONGO_URI)
-db = client[DB_NAME]
-
-# Collections
-transformers_col = db["transformers"]
-history_col = db["transformer_history"]
+# Global PyMongo variables
+client = None
+db = None
+transformers_col = None
+history_col = None
 
 # Predefined transformer master metadata
 MASTER_TRANSFORMERS = [
@@ -62,19 +68,86 @@ MASTER_TRANSFORMERS = [
     }
 ]
 
+def create_indexes():
+    """Creates single-field and compound indexes automatically on startup."""
+    try:
+        logger.info("Initializing database indexes...")
+        
+        # Unique index on transformers master table
+        transformers_col.create_index("transformer_id", unique=True)
+        
+        # Single-field indexes on history/telemetry table
+        history_col.create_index("transformer_id")
+        history_col.create_index("created_at")
+        history_col.create_index("predicted_health")
+        history_col.create_index("maintenance_status")
+        history_col.create_index("fault_priority")
+        history_col.create_index("alert_sent")
+        
+        # Compound index for optimized lookup queries
+        history_col.create_index([("transformer_id", 1), ("created_at", -1)])
+        
+        logger.info("Database indexes created/verified successfully.")
+    except Exception as e:
+        logger.error(f"Error creating database indexes: {e}")
+
 def seed_database():
     """Seeds the transformers master collection if it is empty."""
     try:
         if transformers_col.count_documents({}) == 0:
             transformers_col.insert_many(MASTER_TRANSFORMERS)
-            print("[DB] Master transformers collection seeded successfully.")
+            logger.info("Master transformers collection seeded successfully.")
         else:
-            print("[DB] Master transformers collection already seeded.")
+            logger.info("Master transformers collection already seeded.")
     except Exception as e:
-        print(f"[DB] Error seeding transformers: {e}")
+        logger.error(f"Error seeding transformers: {e}")
 
-# Run seeding on module import
-seed_database()
+def initialize_database():
+    """
+    Initializes MongoClient and handles connection timeouts, connection retries, 
+    and auto-indexing on boot.
+    """
+    global client, db, transformers_col, history_col
+    
+    # Configure hardened connect options:
+    # serverSelectionTimeoutMS, connectTimeoutMS, and socketTimeoutMS are all set to 5000ms
+    client = MongoClient(
+        MONGO_URI,
+        serverSelectionTimeoutMS=5000,
+        connectTimeoutMS=5000,
+        socketTimeoutMS=5000
+    )
+    db = client[DB_NAME]
+    transformers_col = db["transformers"]
+    history_col = db["transformer_history"]
+    
+    max_attempts = 3
+    retry_wait_seconds = 2
+    
+    for attempt in range(1, max_attempts + 1):
+        try:
+            logger.info(f"Connecting to MongoDB Atlas (Attempt {attempt}/{max_attempts})...")
+            # Trigger connection attempt by executing a ping command
+            client.admin.command('ping')
+            logger.info("Connected successfully to MongoDB Atlas.")
+            
+            # Successfully connected; build indexes and seed database
+            create_indexes()
+            seed_database()
+            return
+        except (ConnectionFailure, ServerSelectionTimeoutError) as e:
+            logger.warning(f"MongoDB connection attempt {attempt} failed: {e}")
+            if attempt < max_attempts:
+                time.sleep(retry_wait_seconds)
+            else:
+                logger.critical("Failed to connect to MongoDB Atlas after 3 attempts. Exiting application gracefully.")
+                sys.exit(1)
+        except Exception as e:
+            logger.critical(f"Unexpected error initializing MongoDB connection: {e}. Exiting.")
+            sys.exit(1)
+
+# Invoke connection setup on module import
+initialize_database()
 
 def insert_prediction(record):
     """
@@ -114,7 +187,7 @@ def insert_prediction(record):
         result = history_col.insert_one(record)
         return str(result.inserted_id)
     except Exception as e:
-        print(f"[DB] Error inserting prediction: {e}")
+        logger.error(f"Error inserting prediction: {e}")
         return None
 
 def update_maintenance_status(record_id, status):
@@ -153,14 +226,14 @@ def update_maintenance_status(record_id, status):
                 dt_diff_resp = (now - fault_detected).total_seconds() / 60.0
                 update_fields["response_time_minutes"] = round(dt_diff_resp, 1)
                 
-            # repair time = resolved_time - fault_detected_time
+            # repair time = resolved_time - fault_detected_time (corrected total duration since detection)
             dt_diff_repair = (now - fault_detected).total_seconds() / 60.0
             update_fields["repair_time_minutes"] = round(dt_diff_repair, 1)
 
         history_col.update_one({"_id": ObjectId(record_id)}, {"$set": update_fields})
         return True
     except Exception as e:
-        print(f"[DB] Error updating maintenance: {e}")
+        logger.error(f"Error updating maintenance status: {e}")
         return False
 
 def update_alert_sent(record_id, status=True):
@@ -169,7 +242,7 @@ def update_alert_sent(record_id, status=True):
         history_col.update_one({"_id": ObjectId(record_id)}, {"$set": {"alert_sent": status}})
         return True
     except Exception as e:
-        print(f"[DB] Error updating alert_sent: {e}")
+        logger.error(f"Error updating alert_sent status: {e}")
         return False
 
 def get_last_alert_time(transformer_id):
@@ -186,7 +259,7 @@ def get_last_alert_time(transformer_id):
             return latest.get("created_at")
         return None
     except Exception as e:
-        print(f"[DB] Error checking last alert time: {e}")
+        logger.error(f"Error checking last alert time: {e}")
         return None
 
 def get_history(search=None, sort_by="timestamp_desc", filter_health=None, 
@@ -284,7 +357,7 @@ def get_history(search=None, sort_by="timestamp_desc", filter_health=None,
 
         return records, total_records
     except Exception as e:
-        print(f"[DB] Error fetching history: {e}")
+        logger.error(f"Error fetching history: {e}")
         return [], 0
 
 def get_dashboard_stats():
@@ -373,7 +446,7 @@ def get_dashboard_stats():
             "avg_repair_time": avg_repair
         }
     except Exception as e:
-        print(f"[DB] Error getting dashboard stats: {e}")
+        logger.error(f"Error computing dashboard stats: {e}")
         return {}
 
 def get_analytics_data():
@@ -468,7 +541,7 @@ def get_analytics_data():
             "fault_type_distribution": fault_types
         }
     except Exception as e:
-        print(f"[DB] Error getting analytics: {e}")
+        logger.error(f"Error generating analytics: {e}")
         return {}
 
 def get_transformer_health_timeline(transformer_id):
@@ -485,5 +558,5 @@ def get_transformer_health_timeline(transformer_id):
             r["_id"] = str(r["_id"])
         return records
     except Exception as e:
-        print(f"[DB] Error getting timeline for {transformer_id}: {e}")
+        logger.error(f"Error fetching health timeline: {e}")
         return []
