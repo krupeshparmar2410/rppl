@@ -160,7 +160,7 @@
                     {% if r.status_history %}
                         <div style="font-size: 7px; color: #555; line-height: 1.2;">
                             {% for h in r.status_history %}
-                                • {{ h.status }} ({{ h.timestamp.split('T')[0] if 'T' in h.timestamp else h.timestamp }} by {{ h.updated_by }})<br>
+                                • {{ h.status }} ({{ (h.timestamp | string).split('T')[0].split(' ')[0] if h.timestamp else 'N/A' }} by {{ h.updated_by }})<br>
                             {% endfor %}
                         </div>
                     {% else %}

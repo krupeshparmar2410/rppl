@@ -551,7 +551,7 @@ def get_history(search=None, sort_by="timestamp_desc", filter_health=None,
         # Format ObjectIds and datetimes for JSON
         for r in records:
             r["_id"] = str(r["_id"])
-            if "transformer" in r:
+            if "transformer" in r and r["transformer"]:
                 r["city"] = r["transformer"].get("city")
                 r["location"] = r["transformer"].get("city") or r["transformer"].get("location")
                 r["service_station"] = r["transformer"].get("service_station")
